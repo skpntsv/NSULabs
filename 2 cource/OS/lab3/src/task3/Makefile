@@ -1,7 +1,7 @@
 all: main
 
-main: ./src/main.c
-	gcc ./src/main.c -o printPagemap -Wall
+main: ./source/main.c
+	gcc ./source/main.c -o printPagemap -Wall
 
 clean:
 	rm -f printPagemap
