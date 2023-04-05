@@ -61,7 +61,6 @@ void readMaps(char* path) {
     char* line = NULL;
     size_t lineSize = 0;
     size_t readSize = 0;
-    //size_t counter = 0;
 
     while ((readSize = getline(&line, &lineSize, file)) != -1) {
         uint64_t start, end;
@@ -69,19 +68,15 @@ void readMaps(char* path) {
 
         sscanf(line, "%lx-%lx %s", &start, &end, perms);
         if (perms[0] == 'r' && perms[1] != 'w') {
-            //printf("%lx :-: %lx\n", start, end);
             printPagemap(start, end, path);
-            //counter++;
         }
     }
 
     free(line);
     fclose(file);
-    //printf("Было напечатано %ld виртаульных страниц\n", counter);
 }
 
 int main(int argc, char *argv[]) {
-    //int pid;
     char path[128];
 
     if (argc != 2) {

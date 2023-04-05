@@ -4,7 +4,6 @@
 #include <sys/reg.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-//#include <sys/user.h>
 #include <unistd.h>
 
 int main(int argc, char* argv[]) {
@@ -16,7 +15,6 @@ int main(int argc, char* argv[]) {
     long orig_rax;
     int status;
     int flag = 1;
-    //struct user_regs_struct regs;
 
     child = fork();
     if (child < 0) {
@@ -57,7 +55,6 @@ int main(int argc, char* argv[]) {
         printf("System call %ld\n", orig_rax);        
 
         while (WIFSTOPPED(status)) {
-            //ptrace(PTRACE_GETREGS, child, NULL, &regs);
             if (!flag) {
                 orig_rax = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX, NULL);
                 if (orig_rax == -1) {
