@@ -1,17 +1,18 @@
 CC=mpicc
-CFLAGS=-Wall
-LDFLAGS=-o
+CFLAGS=-lm -Wall
+LDFLAGS=-o $@
 SOURCES=./src/main.c
-EXECUTABLE=main
-OUTPUT=test
+EXECUTABLE=execute
+
+NP=2
 
 all: $(EXECUTABLE)
 		
 $(EXECUTABLE): $(SOURCES) 
-	$(CC) $(LDFLAGS) $(OUTPUT) $(SOURCES) $(CFLAGS)
+	$(CC) $(LDFLAGS) $(SOURCES) $(CFLAGS)
 
-run: $(OUTPUT)
-	mpirun -np 2 $(OUTPUT)
+run: $(EXECUTABLE)
+	mpirun -np $(NP) $(EXECUTABLE)
 
 clean:
-	rm -f $(OUTPUT)
+	rm -f $(EXECUTABLE)
