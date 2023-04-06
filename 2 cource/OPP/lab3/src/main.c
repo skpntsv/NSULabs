@@ -5,9 +5,19 @@
 #include <mpi.h>
 
 #define N 10
-#define n1 5
-#define n2 5
-#define n3 5
+#define n1 4
+#define n2 4
+#define n3 4
+
+void printMatrix(const double* A, int lin, int col) {
+	for (size_t i = 0; i < lin; i++) {
+		for (size_t j = 0; j < col; j++) {
+			printf("%lf ", A[i * col + j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+}
 
 void multMatrixs(const double* A, const double* x, double* Ax) {
 	for (size_t i = 0; i < N; ++i) {
@@ -79,12 +89,30 @@ int main(int argc, char *argv[]) {
 
 
     // распределение матриц A и B по процессам
-    int countA = n1 / p1;
-    int countB = n3 / p2;
-
+    int countA, countB;
+    countA = n1 / p1;
+    countB = n3 / p2;
     double* A_local = (double*)calloc(countA * p2, sizeof(double));
 	double* B_local = (double*)calloc(p2 * countB, sizeof(double));
 	double* C_local = (double*)calloc(countA * countB, sizeof(double));
+
+    int* scounts = NULL;
+	int* displs = NULL;
+    displs = (int*)malloc(size * sizeof(int));
+    scounts = (int*)malloc(size * sizeof(int));
+    offset = 0;
+    for (i = 0; i < size; ++i) {
+        displs[i] = offset;
+        //offset += stride[i];
+        scounts[i] = countA;
+    }
+	MPI_SCATTERV(A, scounts, displs, MPI_DOUBLE, A_local, scounts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	for (i = 0; i < size; ++i) {
+        displs[i] = offset;
+        //offset += stride[i];
+        scounts[i] = countA;
+    }
+	MPI_SCATTERV(B, scounts, displs, MPI_DOUBLE, B_local, scounts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     printf("rank = %d\n", rank);
     if (rank == 0) {
