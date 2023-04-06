@@ -5,14 +5,17 @@
 #include <mpi.h>
 
 #define N 10
-#define n1 4
-#define n2 4
-#define n3 4
+#define n1 5
+#define n2 5
+#define n3 5
 
-void printMatrix(const double* A, int lin, int col) {
-	for (size_t i = 0; i < lin; i++) {
-		for (size_t j = 0; j < col; j++) {
-			printf("%lf ", A[i * col + j]);
+#define p1 2
+#define p2 2
+
+void printMatrix(const double* A, int rows, int cols) {
+	for (size_t i = 0; i < rows; i++) {
+		for (size_t j = 0; j < cols; j++) {
+			printf("%lf ", A[i * cols + j]);
 		}
 		printf("\n");
 	}
@@ -31,12 +34,21 @@ void multMatrixs(const double* A, const double* x, double* Ax) {
 void init(double* A, double* B, int rank) {
 	// заполняем блоки матриц случайными значениями
     srand(rank);
-    for (int i = 0; i < n1 * n2; i++) {
-        A[i] = (double)rand() / RAND_MAX;
+    for (size_t i = 0; i < n1 * n2; ++i) {
+        //A[i] = (double)rand() / RAND_MAX;
+        A[i] = i;
+        //printf("%lf\n", A[i]);
     }
-    for (int i = 0; i < n2 * n3; i++) {
-        B[i] = (double)rand() / RAND_MAX;
+    for (size_t i = 0; i < n2 * n3; ++i) {
+        //B[i] = (double)rand() / RAND_MAX;
+        B[i] = i;
     }
+
+/*    for (size_t i = 0; i < n1; i++) {
+		for (size_t j = 0; j < n2; j++) {
+			A[i * n2 + j] = 5;
+		}
+	}*/
 }
 
 int main(int argc, char *argv[]) {
@@ -63,7 +75,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// создаем 2D решетку процессоров
-	int p1 = (int)sqrt(size), p2 = (int)sqrt(size);
+	//int p1 = (int)sqrt(size), p2 = (int)sqrt(size);
 	//int coords[2], reorder=1;
     int dims[2] = {p1, p2};
     int periods[2] = {1, 1};
@@ -92,32 +104,62 @@ int main(int argc, char *argv[]) {
     int countA, countB;
     countA = n1 / p1;
     countB = n3 / p2;
-    double* A_local = (double*)calloc(countA * p2, sizeof(double));
-	double* B_local = (double*)calloc(p2 * countB, sizeof(double));
+    if (rank == size - 1) {
+    	countA += n1 % p1;
+    	countB += n3 % p2;
+    }
+    double* A_local = (double*)calloc(countA * n2, sizeof(double));
+	double* B_local = (double*)calloc(n2 * countB, sizeof(double));
 	double* C_local = (double*)calloc(countA * countB, sizeof(double));
 
-    int* scounts = NULL;
-	int* displs = NULL;
-    displs = (int*)malloc(size * sizeof(int));
-    scounts = (int*)malloc(size * sizeof(int));
-    offset = 0;
-    for (i = 0; i < size; ++i) {
+    int* displs = (int*)malloc((size + 1) * sizeof(int));
+    int* scounts = (int*)malloc((size + 1) * sizeof(int));
+    int offset = 0, extra_cols = n1 % p1;
+    for (size_t i = 0; i < size; i++) {
         displs[i] = offset;
-        //offset += stride[i];
+        if ((i == size - 1) && (n1 % p1 != 0)) {
+        	scounts[i] = ((n1 / p1) + (n1 % p1)) * n2;
+        	offset += scounts[i];
+        }
+        else {
+	        scounts[i] = countA * n2;
+	        offset += scounts[i];
+        }
+/*        displs[i] = offset;
         scounts[i] = countA;
+        if (i < extra_cols) {
+        	sendcounts[i]++;
+    	}*/
     }
-	MPI_SCATTERV(A, scounts, displs, MPI_DOUBLE, A_local, scounts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	for (i = 0; i < size; ++i) {
+    //double* A_local = (double*)calloc(scounts[rank] * n2, sizeof(double));
+	MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, A_local, scounts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	offset = 0;
+    for (size_t i = 0; i < size; i++) {
         displs[i] = offset;
-        //offset += stride[i];
-        scounts[i] = countA;
+        if ((i == size - 1) && (n3 % p2 != 0)) {
+        	scounts[i] = ((n3 / p2) + (n3 % p2));
+        	offset += scounts[i];
+        }
+        else {
+	        scounts[i] = countB;
+	        offset += scounts[i];
+        }
     }
-	MPI_SCATTERV(B, scounts, displs, MPI_DOUBLE, B_local, scounts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Scatterv(B, scounts, displs, MPI_DOUBLE, B_local, scounts[rank] * n2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     printf("rank = %d\n", rank);
     if (rank == 0) {
 		free(A);
 		free(B);
+		//printMatrix(A, n1, n2);
+		printMatrix(B, n2, n3);
+		//printf("%lf ", A[1]);
+		//printMatrix(A_local, countA, n2);
+		printMatrix(B_local, n2, countB);
+	}
+	if (rank == 1) {
+		//printMatrix(A_local, countA, n2);
+		//printMatrix(B_local, n2, countB);
 	}
 	free(C);
 	free(A_local);
