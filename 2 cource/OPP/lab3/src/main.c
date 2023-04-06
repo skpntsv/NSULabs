@@ -43,33 +43,58 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    double *A = NULL, *B = NULL;
     double* C = (double*)calloc(n1 * n3, sizeof(double));
 	if (rank == 0) {
-		double* A = (double*)calloc(n1 * n2, sizeof(double));
-		double* B = (double*)calloc(n2 * n3, sizeof(double));
+		A = (double*)calloc(n1 * n2, sizeof(double));
+		B = (double*)calloc(n2 * n3, sizeof(double));
 
 		init(A, B, rank);
 	}
-	double* A_local = (double*)calloc(N * N, sizeof(double));
-	double* B_local = (double*)calloc(N * N, sizeof(double));
-	double* C_local = (double*)calloc(N * N, sizeof(double));
 
 	// создаем 2D решетку процессоров
-	int sqrt_size = (int)sqrt(size);
-    int dims[2] = {sqrt_size, sqrt_size};
+	int p1 = (int)sqrt(size), p2 = (int)sqrt(size);
+	//int coords[2], reorder=1;
+    int dims[2] = {p1, p2};
     int periods[2] = {1, 1};
     //MPI_Comm cart_comm;
     //MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, 0, &cart_comm);
+/*    int size2d, rank2d, sizey, sizex, ranky, rankx;
+	int prevy, prevx, nexty, nextx;
+	MPI_Comm comm2d; // коммуникатор
+	MPI_Comm_size(MPI_COMM_WORLD, &size2d);
+	// определение размеров решетки: dims
+	MPI_Dims_create(size2d, 2, dims);
+	sizey = dims[0]; sizex = dims[1];
+	// создание коммуникатора: comm2d
+	MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, reorder, &comm2d);
+	// получение своего номера в comm2d: rank
+	MPI_Comm_rank(comm2d, &rank2d);
+	// получение своих координат в двумерной решетке: coords
+	MPI_Cart_get(comm2d, 2, dims, periods, coords);
+	ranky = coords[0]; rankx = coords[1];
+	// определение номеров соседей: prevy, nexty, prevx, nextx
+	MPI_Cart_shift(comm2d, 0, 1, &prevy, &nexty);
+	MPI_Cart_shift(comm2d, 1, 1, &prevx, &nextx);*/
+
 
     // распределение матриц A и B по процессам
-    countA = n1 / p1;
-    countB = n3 / p2;
-    countC = countA * countB;
+    int countA = n1 / p1;
+    int countB = n3 / p2;
 
+    double* A_local = (double*)calloc(countA * p2, sizeof(double));
+	double* B_local = (double*)calloc(p2 * countB, sizeof(double));
+	double* C_local = (double*)calloc(countA * countB, sizeof(double));
 
-	free(A);
-	free(B);
+    printf("rank = %d\n", rank);
+    if (rank == 0) {
+		free(A);
+		free(B);
+	}
 	free(C);
+	free(A_local);
+	free(B_local);
+	free(C_local);
 
 	MPI_Finalize();
 
