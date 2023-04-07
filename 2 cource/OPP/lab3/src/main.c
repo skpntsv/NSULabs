@@ -65,6 +65,34 @@ void transpose(double *matrix, int rows, int cols) {
   free(temp);
 }
 
+void scatter_matrix(double* A, double** A_local, int a, int b, int p, int rank, MPI_Comm comm, int *countA) {
+    int size = p1;
+    int* displs = (int*)malloc((size + 1) * sizeof(int));
+    int* scounts = (int*)malloc((size + 1) * sizeof(int));
+    int offset = 0, extra_cols = a % p;
+    
+    for (size_t i = 0; i < size; i++) {
+        displs[i] = offset;
+        scounts[i] = (a / p);
+        
+        if (i < extra_cols) {
+            scounts[i]++;
+            if (i == rank) {
+                (*countA)++;
+            }
+        }
+        
+        offset += scounts[i] * b;
+        scounts[i] *= b;
+    }
+
+    (*A_local) = (double*)calloc(scounts[rank], sizeof(double));
+    MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, *A_local, scounts[rank], MPI_DOUBLE, 0, comm);
+    
+    free(displs);
+    free(scounts);
+}
+
 
 int main(int argc, char *argv[]) {
     int rank, size;
@@ -119,67 +147,73 @@ int main(int argc, char *argv[]) {
     int countA, countB;
     countA = n1 / p1;
     countB = n3 / p2;
-    if (rank == size - 1) {
+/*    if (rank == size - 1) {
     	countA += n1 % p1;
     	countB += n3 % p2;
-    }
-    double* A_local = (double*)calloc(countA * n2, sizeof(double));
+    }*/
+    //double* A_local = (double*)calloc(countA * n2, sizeof(double));
+    double* A_local = NULL;
 	double* B_local = (double*)calloc(n2 * countB, sizeof(double));
 	double* C_local = (double*)calloc(countA * countB, sizeof(double));
 
-    int* displs = (int*)malloc((size + 1) * sizeof(int));
-    int* scounts = (int*)malloc((size + 1) * sizeof(int));
-    int offset = 0, extra_cols = n1 % p1;
-    for (size_t i = 0; i < size; i++) {
-      displs[i] = offset;
-        if ((i == size - 1) && (n1 % p1 != 0)) {
-        	scounts[i] = ((n1 / p1) + (n1 % p1)) * n2;
-        }
-        else {
-	        scounts[i] = countA * n2;
-        }
-        offset += scounts[i];
-/*        displs[i] = offset;
-        scounts[i] = countA;
-        if (i < extra_cols) {
-        	scounts[i]++;
-    	}
-    	offset += scounts[i] * n2;*/
-    }
-    //double* A_local = (double*)calloc(scounts[rank] * n2, sizeof(double));
-	MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, A_local, scounts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	offset = 0;
-    for (size_t i = 0; i < size; i++) {
-        displs[i] = offset;
-        if ((i == size - 1) && (n2 % p2 != 0)) {
-        	scounts[i] = ((n2 / p2) + (n2 % p2)) * n3;
-        }
-        else {
-	        scounts[i] = countB * n3;
-        }
-        offset += scounts[i];
-    }
-    if (rank == 0) {
-		printMatrix(B, n2, n3);
-	    transpose(B, n2, n3);
-	    printMatrix(B, n3, n2);
-	}
-	MPI_Scatterv(B, scounts, displs, MPI_DOUBLE, B_local, scounts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	transpose(B_local, countB, n2);
+//     int* displs = (int*)malloc((size + 1) * sizeof(int));
+//     int* scounts = (int*)malloc((size + 1) * sizeof(int));
+//     int offset = 0, extra_cols = n1 % p1;
+//     for (size_t i = 0; i < size; i++) {
+// /*      displs[i] = offset;
+//         if ((i == size - 1) && (n1 % p1 != 0)) {
+//         	scounts[i] = ((n1 / p1) + (n1 % p1)) * n2;
+//         }
+//         else {
+// 	        scounts[i] = countA * n2;
+//         }
+//         offset += scounts[i];*/
+//         displs[i] = offset;
+//         scounts[i] = (n1 / p1);
+//         if (i < extra_cols) {
+//         	scounts[i]++;
+//         	if (i == rank) {
+//         		countA++;
+//         	}
+//     	}
+//     	offset += scounts[i] * n2;
+//     	scounts[i] *= n2;
+//     }
+//     double* A_local = (double*)calloc(scounts[rank], sizeof(double));
+// 	MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, A_local, scounts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	// offset = 0;
+    // for (size_t i = 0; i < size; i++) {
+    //     displs[i] = offset;
+    //     if ((i == size - 1) && (n2 % p2 != 0)) {
+    //     	scounts[i] = ((n2 / p2) + (n2 % p2)) * n3;
+    //     }
+    //     else {
+	//         scounts[i] = countB * n3;
+    //     }
+    //     offset += scounts[i];
+    // }
+    // if (rank == 0) {
+	// 	//printMatrix(B, n2, n3);
+	//     transpose(B, n2, n3);
+	//     //printMatrix(B, n3, n2);
+	// }
+	// MPI_Scatterv(B, scounts, displs, MPI_DOUBLE, B_local, scounts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	// transpose(B_local, countB, n2);
+	scatter_matrix(A, &A_local, n1, n2, p1, rank, MPI_COMM_WORLD, &countA);
 
     printf("rank = %d\n", rank);
     if (rank == 0) {
 		free(A);
 		free(B);
-		//printMatrix(A, n1, n2);
+		printMatrix(A, n1, n2);
 		//printMatrix(B, n2, n3);
 		//printf("%lf ", A[1]);
 		//printMatrix(A_local, countA, n2);
 		//printMatrix(B_local, n2, countB);
 	}
 	if (rank == 1) {
-		//printMatrix(A_local, countA, n2);
-		printMatrix(B_local, n2, countB);
+		printMatrix(A_local, countA, n2);
+		//printMatrix(B_local, n2, countB);
 	}
 	free(C);
 	free(A_local);
