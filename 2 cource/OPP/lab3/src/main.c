@@ -65,37 +65,33 @@ void transposeMatrix(double *A, int rows, int cols) {
   free(tmp);
 }
 
-void scatterMatrix(double* A, double** A_local, int rows, int cols, int p, int rank, int size, MPI_Comm comm, int *countA) {
-    int* displs = (int*)malloc((size + 1) * sizeof(int));
-    int* scounts = (int*)malloc((size + 1) * sizeof(int));
-    int offset = 0, extra_cols = rows % p;
+void scatterMatrix(double* A, double** A_local, int rows, int cols, int p, int rank, int size, int coord, int *count, MPI_Comm comm) {
+    if (coord == 0) {
+	    int* displs = (int*)malloc((size + 1) * sizeof(int));
+	    int* scounts = (int*)malloc((size + 1) * sizeof(int));
+	    int offset = 0, extra_cols = rows % p;
 
-    int color = 0;
-  	if (rank  < rows) color = 1;
-    MPI_Comm tmpComm;
-  	MPI_Comm_split(MPI_COMM_WORLD, color, rank, &tmpComm);
+	    for (size_t i = 0; i < size; i++) {
+	        displs[i] = offset;
+	        scounts[i] = (rows / p);
+	        
+	        if (i < extra_cols) {
+	            scounts[i]++;
+	            if (i == rank) {
+	                (*count)++;
+	            }
+	        }
+	        
+	        offset += scounts[i] * cols;
+	        scounts[i] *= cols;
+	    }
 
-    for (size_t i = 0; i < size; i++) {
-        displs[i] = offset;
-        scounts[i] = (rows / p);
-        
-        if (i < extra_cols) {
-            scounts[i]++;
-            if (i == rank) {
-                (*countA)++;
-            }
-        }
-        
-        offset += scounts[i] * cols;
-        scounts[i] *= cols;
-    }
-
-    (*A_local) = (double*)calloc(scounts[rank], sizeof(double));
-    MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, *A_local, scounts[rank], MPI_DOUBLE, 0, tmpComm);
-    
-    free(displs);
-    free(scounts);
-    MPI_Comm_free(&tmpComm);
+	    (*A_local) = (double*)calloc(scounts[rank], sizeof(double));
+		//MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, *A_local, scounts[rank], MPI_DOUBLE, 0, comm);
+		free(displs);
+    	free(scounts);
+    	//MPI_Scatter(A, rows / p * cols, MPI_DOUBLE, *A_local, rows / p * cols, MPI_DOUBLE, 0, comm);
+	}
 }
 
 void bcastLines(double** A, int rows, int cols, int sizeX, int sizeY, int rank) {
@@ -115,7 +111,10 @@ int main(int argc, char *argv[]) {
     int periods[2] = {1, 1};
     int size2d, rank2d, sizeY = 0, sizeX = 0, rankY = 0, rankX = 0;
 	int prevy, prevx, nexty, nextx;
-	MPI_Comm comm2d; // коммуникатор
+	int sub_dims[2] = {0, 0};
+	MPI_Comm comm2d; // коммуникатор 2d решетки
+	MPI_Comm commRows;		// коммуникатор строк
+    MPI_Comm commColumns;	// коммуникатор столбцов
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -136,6 +135,20 @@ int main(int argc, char *argv[]) {
   	// определение номеров соседей: prevy, nexty, prevx, nextx
 	MPI_Cart_shift(comm2d, 0, 1, &prevy, &nexty);
 	MPI_Cart_shift(comm2d, 1, 1, &prevx, &nextx);
+
+/*	sub_dims[0] = 0;
+    sub_dims[1] = 1;
+    MPI_Cart_sub(comm2d, sub_dims, &commRows);
+
+    sub_dims[0] = 1;
+    sub_dims[1] = 0;
+    MPI_Cart_sub(comm2d, sub_dims, &commColumns);*/
+
+    // MPI_Comm_split разделит коммуникатор comm2d на непересекающиеся субкоммуникаторы
+    MPI_Comm_split(comm2d, coords[1], coords[0], &commColumns);
+    MPI_Comm_split(comm2d, coords[0], coords[1], &commRows);
+
+
 
     double *A = NULL;
     double *B = NULL;
@@ -159,9 +172,12 @@ int main(int argc, char *argv[]) {
     double* A_local = NULL;
 	double* B_local = NULL;
 
-	scatterMatrix(A, &A_local, n1, n2, p1, rank, size, comm2d, &countA);
-	//scatterMatrix(B, &B_local, n2, n3, p2, rank, size, comm2d, &countB);
+	scatterMatrix(A, &A_local, n1, n2, sizeX, rank, size, coords[1], &countA, commColumns);
+	printf("CountA = %d\n", countA);
+	//MPI_Bcast(A_local, countA * n2, MPI_DOUBLE, 0, commRows);
+	//scatterMatrix(B, &B_local, n2, n3, sizeY, rank, size, coords[0], &countB, commRows);
 	//transposeMatrix(B_local, countB, n2);
+	//MPI_Bcast(B_local, countB * n2, MPI_DOUBLE, 0, commColumns);
 
 	// Выделяем память по матрицу C_local
 	double* C_local = (double*)calloc(countA * countB, sizeof(double));
@@ -178,13 +194,13 @@ int main(int argc, char *argv[]) {
 		
 		//printMatrix(B_local, n2, countB);
 	}
-	if (rank == 2) {
+	if (rank == 0) {
 		printf("rank = %d\n", rank);
 
-		printMatrix(A_local, countA, n2);
+		//printMatrix(A_local, countA, n2);
 		//printMatrix(B_local, n2, countB);
 	}
-	//free(A_local);
+	free(A_local);
 	//free(B_local);
 	free(C_local);
 
