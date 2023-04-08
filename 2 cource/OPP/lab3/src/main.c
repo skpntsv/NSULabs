@@ -6,9 +6,9 @@
 #include <mpi.h>
 
 #define N 10
-#define n1 5
-#define n2 5
-#define n3 5
+#define n1 6
+#define n2 6
+#define n3 6
 
 #define p1 2
 #define p2 2
@@ -69,7 +69,12 @@ void scatterMatrix(double* A, double** A_local, int rows, int cols, int p, int r
     int* displs = (int*)malloc((size + 1) * sizeof(int));
     int* scounts = (int*)malloc((size + 1) * sizeof(int));
     int offset = 0, extra_cols = rows % p;
-    
+
+    int color = 0;
+  	if (rank  < rows) color = 1;
+    MPI_Comm tmpComm;
+  	MPI_Comm_split(MPI_COMM_WORLD, color, rank, &tmpComm);
+
     for (size_t i = 0; i < size; i++) {
         displs[i] = offset;
         scounts[i] = (rows / p);
@@ -86,95 +91,101 @@ void scatterMatrix(double* A, double** A_local, int rows, int cols, int p, int r
     }
 
     (*A_local) = (double*)calloc(scounts[rank], sizeof(double));
-    MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, *A_local, scounts[rank], MPI_DOUBLE, 0, comm);
+    MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, *A_local, scounts[rank], MPI_DOUBLE, 0, tmpComm);
     
     free(displs);
     free(scounts);
+    MPI_Comm_free(&tmpComm);
+}
+
+void bcastLines(double** A, int rows, int cols, int sizeX, int sizeY, int rank) {
+	int start = (rank - (rank % sizeY));
+	MPI_Comm commLine;
+	MPI_Comm_split(MPI_COMM_WORLD, start, rank, &commLine);
+	if (sizeY > 1) {
+		MPI_Bcast(*A, rows * cols, MPI_DOUBLE, 0, commLine);
+	}
 }
 
 
 int main(int argc, char *argv[]) {
     int rank, size;
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    if (size % 2 != 0) {
-        if (rank == 0) {
-            printf("The number of processes must be a perfect square\n");
-        }
-        MPI_Finalize();
-        return 0;
-    }
-
-    double *A = NULL, *B = NULL;
-    double* C = (double*)calloc(n1 * n3, sizeof(double));
-	if (rank == 0) {
-		A = (double*)calloc(n1 * n2, sizeof(double));
-		B = (double*)calloc(n2 * n3, sizeof(double));
-
-		initMatrixs(A, B, rank);
-		printMatrix(B, n2, n3);
-		transposeMatrix(B, n2, n3);
-	}
-
-	// создаем 2D решетку процессоров
-	//int p1 = (int)sqrt(size), p2 = (int)sqrt(size);
-	//int coords[2], reorder=1;
-    int dims[2] = {p1, p2};
+    int coords[2], reorder = 1;
+    int dims[2] = {0, 0};
     int periods[2] = {1, 1};
-    //MPI_Comm cart_comm;
-    //MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, 0, &cart_comm);
-/*    int size2d, rank2d, sizey, sizex, ranky, rankx;
+    int size2d, rank2d, sizeY = 0, sizeX = 0, rankY = 0, rankX = 0;
 	int prevy, prevx, nexty, nextx;
 	MPI_Comm comm2d; // коммуникатор
-	MPI_Comm_size(MPI_COMM_WORLD, &size2d);
-	// определение размеров решетки: dims
-	MPI_Dims_create(size2d, 2, dims);
-	sizey = dims[0]; sizex = dims[1];
-	// создание коммуникатора: comm2d
-	MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, reorder, &comm2d);
-	// получение своего номера в comm2d: rank
-	MPI_Comm_rank(comm2d, &rank2d);
-	// получение своих координат в двумерной решетке: coords
-	MPI_Cart_get(comm2d, 2, dims, periods, coords);
-	ranky = coords[0]; rankx = coords[1];
-	// определение номеров соседей: prevy, nexty, prevx, nextx
-	MPI_Cart_shift(comm2d, 0, 1, &prevy, &nexty);
-	MPI_Cart_shift(comm2d, 1, 1, &prevx, &nextx);*/
 
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    //double start = MPI_Wtime();
+
+    MPI_Dims_create(size, 2, dims); // Создание коммуникатора comm2d
+	sizeX = dims[0];
+	sizeY = dims[1];
+	printf("sizeY = %d - sizeX = %d\n", sizeY, sizeX);
+    MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, reorder, &comm2d);
+
+	MPI_Comm_rank(comm2d, &rank);
+
+	MPI_Cart_get(comm2d, 2, dims, periods, coords);// получение координат в двумерной решетке
+  	rankX = coords[0]; rankY = coords[1];
+
+  	// определение номеров соседей: prevy, nexty, prevx, nextx
+	MPI_Cart_shift(comm2d, 0, 1, &prevy, &nexty);
+	MPI_Cart_shift(comm2d, 1, 1, &prevx, &nextx);
+
+    double *A = NULL;
+    double *B = NULL;
+    double* C = NULL;
+    if (rank == 0) {
+		A = (double*)calloc(n1 * n2, sizeof(double));
+		B = (double*)calloc(n2 * n3, sizeof(double));
+		C = (double*)calloc(n1 * n3, sizeof(double));
+
+		initMatrixs(A, B, rank);
+		//printMatrix(B, n2, n3);
+		transposeMatrix(B, n2, n3);
+
+		printMatrix(A, n1, n2);
+	}
 
     // распределение матриц A и B по процессам
     int countA, countB;
-    countA = n1 / p1;
-    countB = n3 / p2;
+    countA = n1 / sizeX; //p1
+    countB = n3 / sizeY; //p2
     double* A_local = NULL;
 	double* B_local = NULL;
 
-	scatterMatrix(A, &A_local, n1, n2, p1, rank, size, MPI_COMM_WORLD, &countA);
-	scatterMatrix(B, &B_local, n2, n3, p2, rank, size, MPI_COMM_WORLD, &countB);
-	transposeMatrix(B_local, countB, n2);
+	scatterMatrix(A, &A_local, n1, n2, p1, rank, size, comm2d, &countA);
+	//scatterMatrix(B, &B_local, n2, n3, p2, rank, size, comm2d, &countB);
+	//transposeMatrix(B_local, countB, n2);
 
 	// Выделяем память по матрицу C_local
 	double* C_local = (double*)calloc(countA * countB, sizeof(double));
 
-    printf("rank = %d\n", rank);
+    //printf("rank = %d\n", rank);
     if (rank == 0) {
 		free(A);
 		free(B);
+		free(C);
 		//printMatrix(A, n1, n2);
 		//printMatrix(B, n2, n3);
 		//printf("%lf ", A[1]);
 		//printMatrix(A_local, countA, n2);
-		printMatrix(B_local, n2, countB);
+		
+		//printMatrix(B_local, n2, countB);
 	}
-	if (rank == 1) {
-		//printMatrix(A_local, countA, n2);
-		printMatrix(B_local, n2, countB);
+	if (rank == 2) {
+		printf("rank = %d\n", rank);
+
+		printMatrix(A_local, countA, n2);
+		//printMatrix(B_local, n2, countB);
 	}
-	free(C);
-	free(A_local);
-	free(B_local);
+	//free(A_local);
+	//free(B_local);
 	free(C_local);
 
 	MPI_Finalize();
