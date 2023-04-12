@@ -66,6 +66,7 @@ void transposeMatrix(double *A, int rows, int cols) {
 }
 
 void scatterMatrix(double* A, double** A_local, int rows, int cols, int p, int rank, int size, int coord, int *count, MPI_Comm comm) {
+    (*A_local) = (double*)calloc(rows / p * n2, sizeof(double));
     if (coord == 0) {
 	    int* displs = (int*)malloc((size + 1) * sizeof(int));
 	    int* scounts = (int*)malloc((size + 1) * sizeof(int));
@@ -86,8 +87,9 @@ void scatterMatrix(double* A, double** A_local, int rows, int cols, int p, int r
 	        scounts[i] *= cols;
 	    }
 
-	    (*A_local) = (double*)calloc(scounts[rank], sizeof(double));
-		//MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, *A_local, scounts[rank], MPI_DOUBLE, 0, comm);
+	    //(*A_local) = (double*)calloc(scounts[rank], sizeof(double));
+	    printf("scounts[%d] = %d\n", rank, scounts[rank]);
+		MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, *A_local, scounts[rank], MPI_DOUBLE, 0, comm);
 		free(displs);
     	free(scounts);
     	//MPI_Scatter(A, rows / p * cols, MPI_DOUBLE, *A_local, rows / p * cols, MPI_DOUBLE, 0, comm);
@@ -136,14 +138,6 @@ int main(int argc, char *argv[]) {
 	MPI_Cart_shift(comm2d, 0, 1, &prevy, &nexty);
 	MPI_Cart_shift(comm2d, 1, 1, &prevx, &nextx);
 
-/*	sub_dims[0] = 0;
-    sub_dims[1] = 1;
-    MPI_Cart_sub(comm2d, sub_dims, &commRows);
-
-    sub_dims[0] = 1;
-    sub_dims[1] = 0;
-    MPI_Cart_sub(comm2d, sub_dims, &commColumns);*/
-
     // MPI_Comm_split разделит коммуникатор comm2d на непересекающиеся субкоммуникаторы
     MPI_Comm_split(comm2d, coords[1], coords[0], &commColumns);
     MPI_Comm_split(comm2d, coords[0], coords[1], &commRows);
@@ -174,9 +168,12 @@ int main(int argc, char *argv[]) {
 
 	scatterMatrix(A, &A_local, n1, n2, sizeX, rank, size, coords[1], &countA, commColumns);
 	printf("CountA = %d\n", countA);
-	//MPI_Bcast(A_local, countA * n2, MPI_DOUBLE, 0, commRows);
-	//scatterMatrix(B, &B_local, n2, n3, sizeY, rank, size, coords[0], &countB, commRows);
-	//transposeMatrix(B_local, countB, n2);
+	printf("CountB = %d\n", countB);
+	MPI_Bcast(A_local, countA * n2, MPI_DOUBLE, 0, commRows);
+	scatterMatrix(B, &B_local, n3, n2, sizeY, rank, size, coords[0], &countB, commRows);
+	if (rank == 0) {
+		transposeMatrix(B_local, countB, n2);
+	}
 	//MPI_Bcast(B_local, countB * n2, MPI_DOUBLE, 0, commColumns);
 
 	// Выделяем память по матрицу C_local
