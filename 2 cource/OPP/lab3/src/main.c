@@ -10,9 +10,6 @@
 #define n2 6
 #define n3 6
 
-#define p1 2
-#define p2 2
-
 void printMatrix(const double* A, int rows, int cols) {
 	for (size_t i = 0; i < rows; i++) {
 		for (size_t j = 0; j < cols; j++) {
@@ -23,13 +20,20 @@ void printMatrix(const double* A, int rows, int cols) {
 	printf("\n");
 }
 
-void multMatrixs(const double* A, const double* x, double* Ax) {
-	for (size_t i = 0; i < N; ++i) {
-		Ax[i] = 0;
-		for (size_t j = 0; j < N; ++j) {
-			Ax[i] += A[i * N + j] * x[j];
-		}
-	}
+void multMatrixs(double* C, double* A, double* B, int A_block_size, int B_block_size) {
+    for (int i = 0; i < A_block_size; ++i) {
+        for (int j = 0; j < B_block_size; ++j) {
+            C[i * B_block_size + j] = 0;
+        }
+    } 
+
+    for (int i = 0; i < A_block_size; ++i) {
+        for (int j = 0; j < n2; ++j) {
+            for (int k = 0; k < B_block_size; ++k) {
+                C[i * B_block_size + k] += A[i * n2 + j] * B[j * B_block_size + k];
+            }
+        }
+    }
 }
 
 void initMatrixs(double* A, double* B, int rank) {
@@ -88,7 +92,7 @@ void scatterMatrix(double* A, double** A_local, int rows, int cols, int p, int r
 	    }
 
 	    //(*A_local) = (double*)calloc(scounts[rank], sizeof(double));
-	    printf("scounts[%d] = %d\n", rank, scounts[rank]);
+	    //printf("scounts[%d] = %d\n", rank, scounts[rank]);
 		MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, *A_local, scounts[rank], MPI_DOUBLE, 0, comm);
 		free(displs);
     	free(scounts);
@@ -160,24 +164,26 @@ int main(int argc, char *argv[]) {
 	}
 
     // распределение матриц A и B по процессам
-    int countA, countB;
-    countA = n1 / sizeX; //p1
-    countB = n3 / sizeY; //p2
+    int A_block_size, B_block_size;
+    A_block_size = n1 / sizeX; //p1
+    B_block_size = n3 / sizeY; //p2
     double* A_local = NULL;
 	double* B_local = NULL;
 
-	scatterMatrix(A, &A_local, n1, n2, sizeX, rank, size, coords[1], &countA, commColumns);
-	printf("CountA = %d\n", countA);
-	printf("CountB = %d\n", countB);
-	MPI_Bcast(A_local, countA * n2, MPI_DOUBLE, 0, commRows);
-	scatterMatrix(B, &B_local, n3, n2, sizeY, rank, size, coords[0], &countB, commRows);
-	if (rank == 0) {
-		transposeMatrix(B_local, countB, n2);
-	}
-	//MPI_Bcast(B_local, countB * n2, MPI_DOUBLE, 0, commColumns);
+	scatterMatrix(A, &A_local, n1, n2, sizeX, rank, size, coords[1], &A_block_size, commColumns);
+	//printf("CountA = %d\n", A_block_size);
+	//printf("CountB = %d\n", B_block_size);
+	MPI_Bcast(A_local, A_block_size * n2, MPI_DOUBLE, 0, commRows);
+	scatterMatrix(B, &B_local, n3, n2, sizeY, rank, size, coords[0], &B_block_size, commRows);
+	transposeMatrix(B_local, B_block_size, n2);
+	MPI_Bcast(B_local, B_block_size * n2, MPI_DOUBLE, 0, commColumns);
 
 	// Выделяем память по матрицу C_local
-	double* C_local = (double*)calloc(countA * countB, sizeof(double));
+	double* C_local = (double*)calloc(A_block_size * B_block_size, sizeof(double));
+	transposeMatrix(B_local, n2, B_block_size);
+
+
+	multMatrixs(C_local, A_local, B_local, A_block_size, B_block_size);
 
     //printf("rank = %d\n", rank);
     if (rank == 0) {
@@ -187,15 +193,15 @@ int main(int argc, char *argv[]) {
 		//printMatrix(A, n1, n2);
 		//printMatrix(B, n2, n3);
 		//printf("%lf ", A[1]);
-		//printMatrix(A_local, countA, n2);
+		//printMatrix(A_local, A_block_size, n2);
 		
-		//printMatrix(B_local, n2, countB);
+		//printMatrix(B_local, n2, B_block_size);
 	}
 	if (rank == 0) {
 		printf("rank = %d\n", rank);
 
-		//printMatrix(A_local, countA, n2);
-		//printMatrix(B_local, n2, countB);
+		//printMatrix(A_local, A_block_size, n2);
+		//printMatrix(B_local, n2, B_block_size);
 	}
 	free(A_local);
 	//free(B_local);
