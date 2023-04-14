@@ -11,8 +11,8 @@
 #define n3 6
 
 void printMatrix(const double* A, int rows, int cols) {
-	for (size_t i = 0; i < rows; i++) {
-		for (size_t j = 0; j < cols; j++) {
+	for (size_t i = 0; i < rows; ++i) {
+		for (size_t j = 0; j < cols; ++j) {
 			printf("%lf ", A[i * cols + j]);
 		}
 		printf("\n");
@@ -57,21 +57,21 @@ void initMatrixs(double* A, double* B, int rank) {
 }
 
 void transposeMatrix(double *A, int rows, int cols) {
-  double *tmp = (double*)malloc(rows * cols * sizeof(double));
-  memcpy(tmp, A, rows * cols * sizeof(double));
+	double *tmp = (double*)malloc(rows * cols * sizeof(double));
+	memcpy(tmp, A, rows * cols * sizeof(double));
 
-  for (int i = 0; i < rows; i++) {
-    for (int j = 0; j < cols; j++) {
-      A[j * rows + i] = tmp[i * cols + j];
-    }
-  }
+	for (int i = 0; i < rows; i++) {
+	for (int j = 0; j < cols; j++) {
+	  A[j * rows + i] = tmp[i * cols + j];
+	}
+	}
 
-  free(tmp);
+	free(tmp);
 }
 
 void scatterMatrix(double* A, double** A_local, int rows, int cols, int p, int rank, int size, int coord, int *count, MPI_Comm comm) {
-    (*A_local) = (double*)calloc(rows / p * n2, sizeof(double));
-    if (coord == 0) {
+	(*A_local) = (double*)calloc(rows / p * n2, sizeof(double));
+	if (coord == 0) {
 	    int* displs = (int*)malloc((size + 1) * sizeof(int));
 	    int* scounts = (int*)malloc((size + 1) * sizeof(int));
 	    int offset = 0, extra_cols = rows % p;
@@ -95,20 +95,10 @@ void scatterMatrix(double* A, double** A_local, int rows, int cols, int p, int r
 	    //printf("scounts[%d] = %d\n", rank, scounts[rank]);
 		MPI_Scatterv(A, scounts, displs, MPI_DOUBLE, *A_local, scounts[rank], MPI_DOUBLE, 0, comm);
 		free(displs);
-    	free(scounts);
-    	//MPI_Scatter(A, rows / p * cols, MPI_DOUBLE, *A_local, rows / p * cols, MPI_DOUBLE, 0, comm);
+		free(scounts);
+		//MPI_Scatter(A, rows / p * cols, MPI_DOUBLE, *A_local, rows / p * cols, MPI_DOUBLE, 0, comm);
 	}
 }
-
-void bcastLines(double** A, int rows, int cols, int sizeX, int sizeY, int rank) {
-	int start = (rank - (rank % sizeY));
-	MPI_Comm commLine;
-	MPI_Comm_split(MPI_COMM_WORLD, start, rank, &commLine);
-	if (sizeY > 1) {
-		MPI_Bcast(*A, rows * cols, MPI_DOUBLE, 0, commLine);
-	}
-}
-
 
 int main(int argc, char *argv[]) {
     int rank, size;
@@ -138,15 +128,9 @@ int main(int argc, char *argv[]) {
 	MPI_Cart_get(comm2d, 2, dims, periods, coords);// получение координат в двумерной решетке
   	rankX = coords[0]; rankY = coords[1];
 
-  	// определение номеров соседей: prevy, nexty, prevx, nextx
-	MPI_Cart_shift(comm2d, 0, 1, &prevy, &nexty);
-	MPI_Cart_shift(comm2d, 1, 1, &prevx, &nextx);
-
     // MPI_Comm_split разделит коммуникатор comm2d на непересекающиеся субкоммуникаторы
     MPI_Comm_split(comm2d, coords[1], coords[0], &commColumns);
     MPI_Comm_split(comm2d, coords[0], coords[1], &commRows);
-
-
 
     double *A = NULL;
     double *B = NULL;
@@ -170,20 +154,45 @@ int main(int argc, char *argv[]) {
     double* A_local = NULL;
 	double* B_local = NULL;
 
+
+	// 1. Матрица А распределяется по горизонтальным полосам вдоль координаты (x,0).
 	scatterMatrix(A, &A_local, n1, n2, sizeX, rank, size, coords[1], &A_block_size, commColumns);
-	//printf("CountA = %d\n", A_block_size);
-	//printf("CountB = %d\n", B_block_size);
-	MPI_Bcast(A_local, A_block_size * n2, MPI_DOUBLE, 0, commRows);
+
+	// 2. Матрица B распределяется по вертикальным полосам вдоль координаты (0,y).
 	scatterMatrix(B, &B_local, n3, n2, sizeY, rank, size, coords[0], &B_block_size, commRows);
 	transposeMatrix(B_local, B_block_size, n2);
+
+	if (rank == 1) {
+		printMatrix(B_local, n2, B_block_size);
+	}
+
+	// 3. Полосы А распространяются в измерении y
+	MPI_Bcast(A_local, A_block_size * n2, MPI_DOUBLE, 0, commRows);
+
+	// 4. Полосы B распространяются в измерении х
 	MPI_Bcast(B_local, B_block_size * n2, MPI_DOUBLE, 0, commColumns);
 
 	// Выделяем память по матрицу C_local
 	double* C_local = (double*)calloc(A_block_size * B_block_size, sizeof(double));
-	transposeMatrix(B_local, n2, B_block_size);
 
-
+	// 5. Каждый процесс вычисляет одну подматрицу произведения.
+	//transposeMatrix(B_local, n2, B_block_size);
 	multMatrixs(C_local, A_local, B_local, A_block_size, B_block_size);
+	//transposeMatrix(B_local, B_block_size, n2);
+	//transposeMatrix(C_local, A_block_size, B_block_size);
+
+	if (rank == 0) {
+		//transposeMatrix(C, n1, n3);
+	    printMatrix(C_local, A_block_size, B_block_size);
+	}
+
+	// ТУТ СДЕЛАТЬ МПАЙ ТАЙП
+	MPI_Gather(C_local, A_block_size * B_block_size, MPI_DOUBLE, C, A_block_size * B_block_size, MPI_DOUBLE, 0, comm2d);
+
+	if (rank == 0) {
+		//transposeMatrix(C, n1, n3);
+	    printMatrix(C, n1, n3);
+	}
 
     //printf("rank = %d\n", rank);
     if (rank == 0) {
@@ -198,13 +207,13 @@ int main(int argc, char *argv[]) {
 		//printMatrix(B_local, n2, B_block_size);
 	}
 	if (rank == 0) {
-		printf("rank = %d\n", rank);
+		//printf("rank = %d\n", rank);
 
 		//printMatrix(A_local, A_block_size, n2);
 		//printMatrix(B_local, n2, B_block_size);
 	}
 	free(A_local);
-	//free(B_local);
+	free(B_local);
 	free(C_local);
 
 	MPI_Finalize();
