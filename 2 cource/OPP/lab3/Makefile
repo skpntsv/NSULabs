@@ -3,6 +3,7 @@ CFLAGS=-lm
 LDFLAGS=-o $@
 SOURCES=./src/main.c
 EXECUTABLE=execute
+PARAMETRS=4 4 4
 
 NP=2
 
@@ -12,7 +13,7 @@ $(EXECUTABLE): $(SOURCES)
 	$(CC) $(LDFLAGS) $(SOURCES) $(CFLAGS)
 
 run: $(EXECUTABLE)
-	mpirun --oversubscribe -np $(NP) $(EXECUTABLE)
+	mpirun --oversubscribe -np $(NP) $(EXECUTABLE) $(PARAMETRS)
 
 clean:
 	rm -f $(EXECUTABLE)
