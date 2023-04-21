@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
     int coords[2], reorder = 1;
     int dims[2] = {0, 0};
     int periods[2] = {1, 1};
-    int sizeY = 0, sizeX = 0, rankY = 0, rankX = 0;
+    int sizeY = 0, sizeX = 0;
 
 	MPI_Comm comm2d; // коммуникатор 2d решетки
 	MPI_Comm commRows;		// коммуникатор строк
@@ -129,7 +129,6 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_rank(comm2d, &rank);
 
 	MPI_Cart_get(comm2d, 2, dims, periods, coords);// получение координат в двумерной решетке
-  	rankX = coords[X]; rankY = coords[Y];
 
     // MPI_Comm_split разделит коммуникатор comm2d на непересекающиеся субкоммуникаторы
     MPI_Comm_split(comm2d, coords[Y], coords[X], &commColumns);
@@ -182,7 +181,8 @@ int main(int argc, char *argv[]) {
 	double finishTime = MPI_Wtime();
 
     if (rank == 0) {
-    	printMatrix(C, n1, n3);
+    	printf("Parametrs:\nn1 = %d\nn2 = %d\nn3 = %d\n", n1, n2, n3);
+    	//printMatrix(C, n1, n3);
 
     	printf("Time: %lf\n", finishTime - startTime);
 
