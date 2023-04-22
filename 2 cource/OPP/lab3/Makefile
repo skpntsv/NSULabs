@@ -1,11 +1,19 @@
 CC=mpicc
 CFLAGS=-Wall
-LDFLAGS=-o
+LDFLAGS=-o $@
 SOURCES=./src/main.c
-EXECUTABLE=main
-OUTPUT=test
+EXECUTABLE=execute
+PARAMETRS=4 4 4
+
+NP=2
 
 all: $(EXECUTABLE)
 		
 $(EXECUTABLE): $(SOURCES) 
-	$(CC) $(LDFLAGS) $(OUTPUT) $(SOURCES) $(CFLAGS)
+	$(CC) $(LDFLAGS) $(SOURCES) $(CFLAGS)
+
+run: $(EXECUTABLE)
+	mpirun --oversubscribe -np $(NP) $(EXECUTABLE) $(PARAMETRS)
+
+clean:
+	rm -f $(EXECUTABLE)
