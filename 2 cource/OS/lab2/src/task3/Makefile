@@ -1,7 +1,7 @@
 all: main
 
-main: main.c
-	gcc main.c -o ptrace -Wall
+main: ./source/main.c
+	gcc ./source/main.c -o ptrace -Wall
 
 clean:
 	rm -f ptrace
