@@ -6,7 +6,6 @@
 #include <errno.h>
 
 #define PAGE_SIZE 0x1000 // 4 кб (размер вирт памяти)
-size_t cnt = 0;
 
 void printPagemap(uint64_t start, uint64_t end, char* path) {
     char pagemapPath[256];
@@ -44,7 +43,6 @@ void printPagemap(uint64_t start, uint64_t end, char* path) {
             page_present,
             page_exclusive_mapped);
 
-        cnt++;
     }
     close(fd);
 }
@@ -67,9 +65,7 @@ void readMaps(char* path) {
         char perms[5];
 
         sscanf(line, "%lx-%lx %s", &start, &end, perms);
-        if (perms[0] == 'r' && perms[1] != 'w') {
-            printPagemap(start, end, path);
-        }
+        printPagemap(start, end, path);
     }
 
     free(line);
@@ -87,7 +83,6 @@ int main(int argc, char *argv[]) {
     
     readMaps(path);
     
-    printf("Было напечатано %ld виртаульных страниц\n", cnt);
 
     return 0;
 }
