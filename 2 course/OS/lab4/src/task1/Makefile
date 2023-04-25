@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=-Wall
 LDFLAGS=-o $@
 SOURCES=./source/vars.c
-EXECUTABLE=execute
+EXECUTABLE=vars
 
 all: $(EXECUTABLE)
 
