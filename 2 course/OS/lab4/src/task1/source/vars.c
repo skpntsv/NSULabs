@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 
@@ -49,6 +50,28 @@ void environ() {
   printf("PORT=%s\n", env);
 }
 
+void heap() {
+  char* buffer = malloc(100);
+  if (buffer == NULL) {
+    perror("malloc");
+  }
+  strcpy(buffer, "Hello world");
+  printf("\nHEAP: %s", buffer);
+  free(buffer);
+
+  printf("\nHEAP: %s", buffer);
+
+  // buffer = malloc(100);
+  // if (buffer == NULL) {
+  //   perror("malloc");
+  // }
+  // strcpy(buffer, "Hello world");
+  // printf("\nHEAP: %s", buffer);
+  // buffer += 50;
+  // free(buffer);
+  // printf("\nHEAP: %s", buffer);
+}
+
 int main() {
   
   printf("function f():      %p\n", f);
@@ -68,6 +91,9 @@ int main() {
 
   // Переменая окружения
   environ();
+
+  // Работа с кучей
+  heap();
 
   printf("\npid: %d\n", getpid());
   sleep(30);
