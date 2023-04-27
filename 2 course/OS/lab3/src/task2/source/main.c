@@ -206,26 +206,5 @@ int main(int argc, char *argv[]) {
 		printf("Что-то пошло не так, я не нашёл %s функции\n", func);
 	}
 
-
-
-
-
-	////////////////////////////////////////
-	//char *path = argv[1];
-	//createDir(path);
-	//printDir(path);
-	//removeDir(path);
-	//createFile(path);
-	//printFile(path);
-	//removeFile(path);
-	//createSymbLink(path);
-	//printSymbLink(path);
-	//printLinkFile(path);
-	//removeSymbLink(path); // TO DO -- переделать, нужно чтобы по файлу удалялись все символьные ссылки
-	//createHardLink(path);
-	//removeHardLink(path); // TO DO -- аналогично removeSymLink()
-	//showInfo(path);
-	//changeMod(path);
-
 	return 0;
 }
