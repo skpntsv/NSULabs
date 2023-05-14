@@ -1,7 +1,7 @@
 CC=mpicc
 CFLAGS=-Wall
 LDFLAGS=-o $@
-SOURCES=./src/main.c
+SOURCES=./src/test4.c
 EXECUTABLE=execute
 
 NP=2
@@ -12,7 +12,7 @@ $(EXECUTABLE): $(SOURCES)
 	$(CC) $(LDFLAGS) $(SOURCES) $(CFLAGS)
 
 run: $(EXECUTABLE)
-	mpirun --oversubscribe -np $(NP) $(EXECUTABLE)
+	mpirun --oversubscribe -np $(NP) ./$(EXECUTABLE)
 
 clean:
 	rm -f $(EXECUTABLE)
