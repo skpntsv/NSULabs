@@ -4,6 +4,24 @@
 #define X 10
 #define Y 10
 
+void initTable(int* A) {
+    A[1 * Y + 1] = 1;
+    A[2 * Y + 2] = 1;
+    A[3 * Y + 0] = 1;
+    A[3 * Y + 1] = 1;
+    A[3 * Y + 2] = 1;
+}
+
+void printTable(const int* A, int rows, int cols) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            printf("%c ", A[i * cols + j] ? 'X' : '-');
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
 int countNeighbors(const int* A, int x, int y, int rows, int cols) {
     int count = 0;
     for (int i = x - 1; i <= x + 1; i++) {
@@ -43,33 +61,16 @@ void updateTable(int* A, int rows, int cols) {
     free(B);
 }
 
-void printTable(const int* A, int rows, int cols) {
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < cols; j++) {
-            printf("%c ", A[i * cols + j] ? 'X' : '-');
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-
-void initTable(int* A) {
-    A[1 * Y + 1] = 1;
-    A[2 * Y + 2] = 1;
-    A[3 * Y + 0] = 1;
-    A[3 * Y + 1] = 1;
-    A[3 * Y + 2] = 1;
-}
-
 int main(int argc, char* argv[]) {
     int* table = (int*)calloc(X * Y, sizeof(int));
 
     initTable(table);
     printTable(table, X, Y);
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 1000; i++) {
         updateTable(table, X, Y);
         printTable(table, X, Y);
+        usleep(5000);
     }
 
     free(table);
