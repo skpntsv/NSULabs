@@ -6,59 +6,75 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+#define BUFFER_SIZE 1024
+
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 8888
 
 int main() {
-    int client_socket;
-    struct sockaddr_in server_addr;
-    char buffer[1024];
-    ssize_t bytes_read;
+    int clientSocket;
+    struct sockaddr_in serverAddr;
+    char buffer[BUFFER_SIZE];
+    size_t bytes_read;
 
     // Создание TCP-сокета
-    client_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (client_socket == -1) {
+    clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (clientSocket == -1) {
         perror("Ошибка создания сокета");
         exit(1);
     }
 
     // Настройка адреса сервера
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");  // Замените на нужный ip сервера
-    server_addr.sin_port = htons(SERVER_PORT);
+    memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET; // IPv4
+    serverAddr.sin_addr.s_addr = inet_addr(SERVER_IP);
+    serverAddr.sin_port = htons(SERVER_PORT);
 
     // Подключение к серверу
-    if (connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
+    if (connect(clientSocket, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
         perror("Ошибка подключения к серверу");
-        close(client_socket);
+        close(clientSocket);
         exit(1);
     }
+    printf("Подключени к серверу выполнено успешно.\n");
+
+    serverAddr.sin_port = htons(getpid());
 
     // Отправка данных на сервер
     while (1) {
-        //strcpy(buffer, "Привет, сервер!");
+        printf("Введите сообщение для отправки серверу (или 'q' для выхода): ");
         fgets(buffer, sizeof(buffer), stdin);
+
+        // Удаление символа новой строки ('\n') из введенной строки
+        size_t len = strlen(buffer);
+        if (buffer[len - 1] == '\n') {
+            buffer[len - 1] = '\0';
+        }
+        
+        // Выход из цикла, если введена команда "q"
         if (strcmp(buffer, "q") == 0) {
             break;
         }
-        if (write(client_socket, buffer, strlen(buffer)) == -1) {
+
+        // Отправка данных на сервер
+        if (write(clientSocket, buffer, len) == -1) {
             perror("Ошибка отправки данных на сервер");
-            close(client_socket);
+            close(clientSocket);
             exit(1);
         }
 
         // Чтение данных от сервера
-        bytes_read = read(client_socket, buffer, sizeof(buffer));
+        bytes_read = read(clientSocket, buffer, len);
         if (bytes_read == -1) {
             perror("Ошибка чтения данных от сервера");
-            close(client_socket);
+            close(clientSocket);
             exit(1);
+        }
+
+        // Вывод полученных данных
+        printf("Получено от сервера: %s\n", buffer);
     }
 
-    printf("Полученные данные от сервера: %.*s\n", (int)bytes_read, buffer);
-    }
-
-    close(client_socket);
+    close(clientSocket);
     return 0;
 }
