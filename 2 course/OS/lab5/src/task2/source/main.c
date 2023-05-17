@@ -18,10 +18,10 @@ int main() {
         printf("\tparent pid: %d\n", getppid());
 
         // Завершаем дочерний процесс
-        sleep(15);
+        // sleep(30);
         exit(5);
     } else {    // Зашли в родительский процесс
-        sleep(3);
+        sleep(15);
         printf("Work in parent proccess:\n");
 
         pid_t parent = getpid();

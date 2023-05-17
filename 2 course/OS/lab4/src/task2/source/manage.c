@@ -20,8 +20,8 @@ void stack(int it) {
 void heap() {
     size_t buf_size = 10;
     char* buffer[buf_size];
-    for (size_t i = 0; i < buf_size; ++i) {
-        buffer[i] = malloc(BUFFER_SIZE * 5);
+    for (int i = 0; i < buf_size; ++i) {
+        buffer[i] = malloc(BUFFER_SIZE * 7);
         if (buffer == NULL) {
             perror("malloc");
             exit(1);
@@ -54,14 +54,14 @@ void read_write_region() {
     sleep(6);
 
     // Попытка чтения из региона с запретом
-    printf("Trying to read from region\n");
-    printf("%c\n", region[1]);
+    // printf("Trying to read from region\n");
+    // printf("%c\n", region[1]);
 
-    sleep(5);
+    // sleep(5);
 
-    // Попытка записи в регион с запрещенной записью
-    printf("Trying to write from region\n");
-    region[1] = 'A';
+    // // Попытка записи в регион с запрещенной записью
+    // printf("Trying to write from region\n");
+    // region[1] = 'A';
 
     // Отсоединяем страницы 4-6 в созданном регионе
     printf("Disconnect 4-6 region\n");
@@ -75,6 +75,7 @@ void read_write_region() {
 
 void signal_handler(int signum) {
     printf("Recieved signal %d\n", signum);
+    exit(1);
 }
 
 int main() {
@@ -83,13 +84,13 @@ int main() {
 
     sleep(15);
     // Перехватка сигнала
-    if (signal(SIGSEGV, SIG_IGN) == SIG_ERR) {
+    if (signal(SIGSEGV, signal_handler) == SIG_ERR) {
         perror("signal");
     }
 
-    //stack(1);
+    // stack(1);
 
-    heap();
+    // heap();
 
     read_write_region();
 
