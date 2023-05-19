@@ -1,7 +1,7 @@
 CC=mpicc
 CFLAGS=-Wall
 LDFLAGS=-o $@
-SOURCES=./src/test4.c
+SOURCES=./src/main.c
 EXECUTABLE=execute
 
 NP=2

@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-#define ROWS 10
-#define COLS 10
+#define ROWS 250
+#define COLS 250
 
 #define MAX_ITERS 2500
 
@@ -46,10 +46,9 @@ int compareVector(char* currentField, char* oldfield, int n) {
     return 1;
 }
 
-void fillostanov(char* ostanov, char* currentField, char** oldFields, int iters, int cols, int linesPerProc) {
+void fillStopFlags(char* stopFlags, char* currentField, char** oldFields, int iters, int cols, int linesPerProc) {
     for (int i = 0; i < iters; i++) {
-        //char* oldfield = oldFields[i];
-        ostanov[i] = compareVector(&currentField[cols], &oldFields[i][cols], cols * linesPerProc);
+        stopFlags[i] = compareVector(&currentField[cols], &oldFields[i][cols], cols * linesPerProc);
     }
 }
 
@@ -169,7 +168,7 @@ int main(int argc, char** argv) {
     int prev = (rank + size - 1) % size;
     int next = (rank + 1) % size;
 
-    int bflag = 0;
+    int flag = 0;
     int numIteration = 0;
 
     double starttime, endtime;
@@ -177,7 +176,7 @@ int main(int argc, char** argv) {
         starttime = MPI_Wtime();
     }
 
-    for (int i = 0; i < MAX_ITERS; i++) {
+    for (numIteration = 0; numIteration < MAX_ITERS; numIteration++) {
         char* newfield = calloc((linesPerProc[rank] + 2) * cols, sizeof(char));
         MPI_Request sreq[2], rreq[2], areq;
 
@@ -198,10 +197,10 @@ int main(int argc, char** argv) {
         MPI_Irecv(&currentField[cols * (linesPerProc[rank] + 1)], cols, MPI_CHAR, next, 10, MPI_COMM_WORLD, &rreq[1]);
 
         // 5. Вычислить вектор флагов останова.
-        char* ostanov = malloc((i + 1) * sizeof(char));
-        fillostanov(ostanov, currentField, oldFields, i, cols, linesPerProc[rank]);
-        // обмен остановами
-        MPI_Iallreduce(MPI_IN_PLACE, ostanov, i, MPI_CHAR, MPI_LAND, MPI_COMM_WORLD, &areq);
+        char* stopFlags = malloc((numIteration + 1) * sizeof(char));
+        fillStopFlags(stopFlags, currentField, oldFields, numIteration, cols, linesPerProc[rank]);
+        // 6. обмен остановами
+        MPI_Iallreduce(MPI_IN_PLACE, stopFlags, numIteration, MPI_CHAR, MPI_LAND, MPI_COMM_WORLD, &areq);
 
         // 7. Вычислить состояния клеток в строках, кроме первой и последней.
         updateWithoutFandL(currentField, newfield, cols, linesPerProc[rank]);
@@ -230,26 +229,25 @@ int main(int argc, char** argv) {
         MPI_Wait(&areq, &status);
 
         //15 Сравнить вектора флагов останова, полученные от всех ядер. Если для какой-то итерации все флаги равны 1, завершить выполнение программы
-        for (int j = 0; j < i; j++) {
-            if (ostanov[j] == 1) {
-                bflag = 1;
-                numIteration = i;
+        for (int i = 0; i < numIteration; i++) {
+            if (stopFlags[i] == 1) {
+                flag = 1;
                 break;
             }
         }
-        free(ostanov);
-        if (bflag == 1) {
+        free(stopFlags);
+        if (flag == 1) {
             break;
         }
 
-        oldFields[i] = currentField;
+        oldFields[numIteration] = currentField;
         currentField = newfield;
 
         MPI_Barrier(MPI_COMM_WORLD);
 
-        // Print the field
-        //printf("Iteration: %d\n", i);
-        //printField(currentField, cols, linesPerProc[rank]);
+        // Print field
+        // printf("Iteration: %d\n", numIteration);
+        // printField(currentField, cols, linesPerProc[rank]);
     }
 
 
