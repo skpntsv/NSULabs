@@ -37,7 +37,7 @@ void initFirstWhole(char* field, int rows) {
 
 }
 
-int compareVector(char* currentField, char* oldfield, int n) {
+int compareVector(const char* currentField, const char* oldfield, int n) {
     for (int i = 0; i < n; i++) {
         if (currentField[i] != oldfield[i]) {
             return 0;
@@ -46,13 +46,13 @@ int compareVector(char* currentField, char* oldfield, int n) {
     return 1;
 }
 
-void fillStopFlags(char* stopFlags, char* currentField, char** oldFields, int iters, int cols, int linesPerProc) {
+void fillStopFlags(char* stopFlags, const char* currentField, char** oldFields, int iters, int cols, int linesPerProc) {
     for (int i = 0; i < iters; i++) {
         stopFlags[i] = compareVector(&currentField[cols], &oldFields[i][cols], cols * linesPerProc);
     }
 }
 
-int countNeighbours(char* field, int x, int y, int cols) {
+int countNeighbours(const char* field, int x, int y, int cols) {
     int res = 0;
     for (int dy = -1; dy < 2; dy++) {
         for (int dx = -1; dx < 2; dx++) {
@@ -72,7 +72,7 @@ int countNeighbours(char* field, int x, int y, int cols) {
     return res;
 }
 
-void updateFirstLine(char* currentField, char* newfield, int cols) {
+void updateFirstLine(const char* currentField, char* newfield, int cols) {
     for (int i = 0; i < cols; i++) {
         int nbrs = countNeighbours(currentField, i, 1, cols);
         if (currentField[cols + i] == 0) {
@@ -83,7 +83,7 @@ void updateFirstLine(char* currentField, char* newfield, int cols) {
     }
 }
 
-void updateLastLine(char* currentField, char* newfield, int cols, int linesPerProc) {
+void updateLastLine(const char* currentField, char* newfield, int cols, int linesPerProc) {
     for (int i = 0; i < cols; i++) {
         int nbrs = countNeighbours(currentField, i, linesPerProc, cols);
         if (currentField[cols * linesPerProc + i] == 0) {
@@ -145,7 +145,6 @@ int main(int argc, char** argv) {
     // массив указателей на старые поля с предыдущих итераций
     char* oldFields[MAX_ITERS];
 
-    // выделяем памяти сколько требуется + 2 строчки - копии соседских верхних \ нижних
     char* currentField = calloc((linesPerProc[rank] + 2) * cols, sizeof(char));
 
 
@@ -199,6 +198,7 @@ int main(int argc, char** argv) {
         // 5. Вычислить вектор флагов останова.
         char* stopFlags = malloc((numIteration + 1) * sizeof(char));
         fillStopFlags(stopFlags, currentField, oldFields, numIteration, cols, linesPerProc[rank]);
+        
         // 6. обмен остановами
         MPI_Iallreduce(MPI_IN_PLACE, stopFlags, numIteration, MPI_CHAR, MPI_LAND, MPI_COMM_WORLD, &areq);
 
@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
         MPI_Wait(&sreq[1], &status);
         MPI_Wait(&rreq[1], &status);
 
-        //13. Вычислить состояния клеток в последней строке.
+        // 13. Вычислить состояния клеток в последней строке.
         updateLastLine(currentField, newfield, cols, linesPerProc[rank]);
 
         // 14 - wait 
@@ -243,8 +243,6 @@ int main(int argc, char** argv) {
         oldFields[numIteration] = currentField;
         currentField = newfield;
 
-        MPI_Barrier(MPI_COMM_WORLD);
-
         // Print field
         // printf("Iteration: %d\n", numIteration);
         // printField(currentField, cols, linesPerProc[rank]);
@@ -254,7 +252,7 @@ int main(int argc, char** argv) {
     if (rank == 0) {
         endtime = MPI_Wtime();
         printf("finished on %d iteration\n", numIteration);
-        printf("Time taken: %f\n seconds\n", endtime - starttime);
+        printf("Time taken: %f seconds\n", endtime - starttime);
     }
 
     // почистить все старые поля
