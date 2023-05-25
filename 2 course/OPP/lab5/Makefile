@@ -1,5 +1,5 @@
 CC=mpicc
-CFLAGS=-Wall
+CFLAGS=-Wall -lm
 LDFLAGS=-o $@
 SOURCES=./src/main.c
 EXECUTABLE=execute
