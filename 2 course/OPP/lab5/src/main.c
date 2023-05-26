@@ -20,19 +20,21 @@ typedef struct Task {
 pthread_mutex_t mutex;
 Task* listOfTasks;
 int counter = 0;
+double localComplexity = 0;
 
 void executeTask(Task* task, int rank) {
-    // pthread_mutex_lock(&mutex);
-    if (task->completed == 0) {
+    //pthread_mutex_lock(&mutex);
+    //if (task->completed == 0) {
         // printf("Worker %d: Start task %d(%d)\n", rank, task->taskNumber, task->complexity);
         task->completed = 1;
-        // pthread_mutex_unlock(&mutex);
+        //pthread_mutex_unlock(&mutex);
         usleep(task->complexity);
 
         counter++;
-    } else {
-        // pthread_mutex_unlock(&mutex);
-    }
+        localComplexity += task->complexity;
+    //} /*else {
+        pthread_mutex_unlock(&mutex);
+    //}*/
 }
 
 int request_task(int request_rank) {
@@ -56,7 +58,7 @@ void* executorTread(void* args) {
                 // pthread_mutex_unlock(&mutex);
                 break;
             }
-           //  pthread_mutex_unlock(&mutex);
+            // pthread_mutex_unlock(&mutex);
         }
 
         if (curTask == NULL) {
@@ -128,7 +130,7 @@ int main(int argc, char* argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    // pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_init(&mutex, NULL);
     pthread_attr_init(&attrs);
     pthread_attr_setdetachstate(&attrs, PTHREAD_CREATE_JOINABLE);
 
@@ -172,13 +174,24 @@ int main(int argc, char* argv[]) {
         printf("Difference: %lf\n", fabs(allTasksComplexity / size - finalTime));
         printf("Efficiency: %lf\n", (allTasksComplexity / size) / (finalTime));
     }
-    printf("rank - %d completed %d tasks\n", rank, counter);
+
+    double globalComplexity = 0;
+    int globalTasks = 0;
+
+    MPI_Allreduce(&localComplexity, &globalComplexity, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&counter, &globalTasks, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    // printf("rank - %d completed %d tasks\n", rank, counter);
+    // printf("rank - %d worked %lf ms\n", rank, localComplexity / 1000000.0);
+    if (rank == 0) {
+        printf("globalComplexity = %lf\n", globalComplexity);
+        printf("globalTasks = %d\n", globalTasks);
+    }
 
     free(threadArgs);
     free(listOfTasks);
 
-    // pthread_mutex_destroy(&mutex);
-    // pthread_attr_destroy(&attrs);
+    pthread_mutex_destroy(&mutex);
+    pthread_attr_destroy(&attrs);
 
     MPI_Finalize();
     return 0;
