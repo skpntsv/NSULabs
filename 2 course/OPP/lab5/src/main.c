@@ -19,16 +19,19 @@ typedef struct Task {
 
 pthread_mutex_t mutex;
 Task* listOfTasks;
+int counter = 0;
 
 void executeTask(Task* task, int rank) {
-    pthread_mutex_lock(&mutex);
+    // pthread_mutex_lock(&mutex);
     if (task->completed == 0) {
         // printf("Worker %d: Start task %d(%d)\n", rank, task->taskNumber, task->complexity);
         task->completed = 1;
-        pthread_mutex_unlock(&mutex);
+        // pthread_mutex_unlock(&mutex);
         usleep(task->complexity);
+
+        counter++;
     } else {
-        pthread_mutex_unlock(&mutex);
+        // pthread_mutex_unlock(&mutex);
     }
 }
 
@@ -47,13 +50,13 @@ void* executorTread(void* args) {
     while (1) {
         Task* curTask = NULL;
         for (int i = rank * TASKS / size; i < rank * TASKS / size + TASKS / size; ++i) {
-            pthread_mutex_lock(&mutex);
+            // pthread_mutex_lock(&mutex);
             if (!listOfTasks[i].completed) {
                 curTask = &listOfTasks[i];
-                pthread_mutex_unlock(&mutex);
+                // pthread_mutex_unlock(&mutex);
                 break;
             }
-            pthread_mutex_unlock(&mutex);
+           //  pthread_mutex_unlock(&mutex);
         }
 
         if (curTask == NULL) {
@@ -93,14 +96,14 @@ void* serverThread(void* args) {
 
         int task_id = -1;
         for (int i = rank * TASKS / size; i < rank * TASKS / size + TASKS / size; ++i) {
-            pthread_mutex_lock(&mutex);
+            // pthread_mutex_lock(&mutex);
             if (listOfTasks[i].completed == 0) {
                 task_id = i;
                 listOfTasks[i].completed = 1;
-                pthread_mutex_unlock(&mutex);
+                // pthread_mutex_unlock(&mutex);
                 break;
             }
-            pthread_mutex_unlock(&mutex);
+            // pthread_mutex_unlock(&mutex);
         }
         // printf("Server %d: send %d to %d\n", rank, task_id, status.MPI_SOURCE);
         MPI_Send(&task_id, 1, MPI_INT, status.MPI_SOURCE, TASK_TAG, MPI_COMM_WORLD);
@@ -125,7 +128,7 @@ int main(int argc, char* argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    pthread_mutex_init(&mutex, NULL);
+    // pthread_mutex_init(&mutex, NULL);
     pthread_attr_init(&attrs);
     pthread_attr_setdetachstate(&attrs, PTHREAD_CREATE_JOINABLE);
 
@@ -169,12 +172,13 @@ int main(int argc, char* argv[]) {
         printf("Difference: %lf\n", fabs(allTasksComplexity / size - finalTime));
         printf("Efficiency: %lf\n", (allTasksComplexity / size) / (finalTime));
     }
+    printf("rank - %d completed %d tasks\n", rank, counter);
 
     free(threadArgs);
     free(listOfTasks);
 
-    pthread_mutex_destroy(&mutex);
-    pthread_attr_destroy(&attrs);
+    // pthread_mutex_destroy(&mutex);
+    // pthread_attr_destroy(&attrs);
 
     MPI_Finalize();
     return 0;
