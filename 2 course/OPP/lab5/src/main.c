@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include <mpi.h>
 
-#define TASKS 320
+#define TASKS 1000
 #define REQUEST_TAG 0
 #define TASK_TAG 1
 
@@ -23,18 +23,13 @@ int counter = 0;
 double localComplexity = 0;
 
 void executeTask(Task* task, int rank) {
-    //pthread_mutex_lock(&mutex);
-    //if (task->completed == 0) {
-        // printf("Worker %d: Start task %d(%d)\n", rank, task->taskNumber, task->complexity);
-        task->completed = 1;
-        //pthread_mutex_unlock(&mutex);
-        usleep(task->complexity);
-
-        counter++;
-        localComplexity += task->complexity;
-    //} /*else {
-        pthread_mutex_unlock(&mutex);
-    //}*/
+    pthread_mutex_lock(&mutex);
+    // printf("Worker %d: Start task %d(%d)\n", rank, task->taskNumber, task->complexity);
+    task->completed = 1;
+    counter++;
+    localComplexity += task->complexity;
+    pthread_mutex_unlock(&mutex);
+    usleep(task->complexity);
 }
 
 int request_task(int request_rank) {
@@ -48,17 +43,18 @@ int request_task(int request_rank) {
 void* executorTread(void* args) {
     int rank = *((int*) args);
     int size = *((int*) args + 1);
-
+    //--size;
+    printf("rank: %d\ni = %d, i < %d\n", rank, rank * TASKS / size, rank * TASKS / size + TASKS / size);
     while (1) {
         Task* curTask = NULL;
-        for (int i = rank * TASKS / size; i < rank * TASKS / size + TASKS / size; ++i) {
-            // pthread_mutex_lock(&mutex);
+        for (int i = rank * TASKS / size; i < rank * TASKS / size + TASKS / size; ++i) {    // TODO проблема в том, что распределяются не все таски, то есть надо бы как-то переделать
+            pthread_mutex_lock(&mutex);
             if (!listOfTasks[i].completed) {
                 curTask = &listOfTasks[i];
-                // pthread_mutex_unlock(&mutex);
+                pthread_mutex_unlock(&mutex);
                 break;
             }
-            // pthread_mutex_unlock(&mutex);
+            pthread_mutex_unlock(&mutex);
         }
 
         if (curTask == NULL) {
@@ -98,14 +94,14 @@ void* serverThread(void* args) {
 
         int task_id = -1;
         for (int i = rank * TASKS / size; i < rank * TASKS / size + TASKS / size; ++i) {
-            // pthread_mutex_lock(&mutex);
+            pthread_mutex_lock(&mutex);
             if (listOfTasks[i].completed == 0) {
                 task_id = i;
                 listOfTasks[i].completed = 1;
-                // pthread_mutex_unlock(&mutex);
+                pthread_mutex_unlock(&mutex);
                 break;
             }
-            // pthread_mutex_unlock(&mutex);
+            pthread_mutex_unlock(&mutex);
         }
         // printf("Server %d: send %d to %d\n", rank, task_id, status.MPI_SOURCE);
         MPI_Send(&task_id, 1, MPI_INT, status.MPI_SOURCE, TASK_TAG, MPI_COMM_WORLD);
@@ -176,17 +172,16 @@ int main(int argc, char* argv[]) {
     }
 
     double globalComplexity = 0;
-    int globalTasks = 0;
+    int globalCounter = 0;
 
     MPI_Allreduce(&localComplexity, &globalComplexity, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&counter, &globalTasks, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&counter, &globalCounter, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     // printf("rank - %d completed %d tasks\n", rank, counter);
     // printf("rank - %d worked %lf ms\n", rank, localComplexity / 1000000.0);
     if (rank == 0) {
-        printf("globalComplexity = %lf\n", globalComplexity);
-        printf("globalTasks = %d\n", globalTasks);
+        printf("globalComplexity = %lf sec\n", globalComplexity / 1000000.0);
+        printf("globalCounter = %d\n", globalCounter);
     }
-
     free(threadArgs);
     free(listOfTasks);
 
