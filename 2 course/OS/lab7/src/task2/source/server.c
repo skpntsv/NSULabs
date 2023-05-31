@@ -27,11 +27,16 @@ void handle_client(struct Client* client) {
     while (1) {
         // Чтение данных от клиента
         bytes_read = read(client->socket, buffer, sizeof(buffer));
-        if (bytes_read <= 0) {
+        if (bytes_read == 0) {
             printf("Клиент отключился: %s:%d\n",
                 inet_ntoa(client->address.sin_addr), ntohs(client->address.sin_port));
             close(client->socket);
             exit(0);
+        } else {
+            if (bytes_read < 0) {
+                perror("Ошибка чтения данных клиента");
+                exit(1);
+            }
         }
 
         // Отправка данных обратно клиенту
@@ -77,6 +82,8 @@ int main() {
 
     printf("Сервер запущен и ожидает подключений...\n");
 
+    signal(SIGCHLD, SIG_IGN);
+
     while (1) {
         // Принятие входящего соединения
         clientSocket = accept(serverSocket, (struct sockaddr*) &client_addr, &addr_len);
@@ -103,10 +110,6 @@ int main() {
         } else {
             // Мы находимся в родительском процессе
             close(clientSocket);
-            if (waitpid(pid, NULL, WNOHANG) == -1) {
-                perror("waitpid");
-                exit(1);
-            }
         }
     }
     close(serverSocket);
