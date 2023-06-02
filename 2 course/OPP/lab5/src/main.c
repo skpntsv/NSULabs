@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include <mpi.h>
 
-#define TASKS 1000
+#define TASKS 320
 #define REQUEST_TAG 0
 #define TASK_TAG 1
 
@@ -17,18 +17,16 @@ typedef struct Task {
     char completed;
 } Task;
 
+
 pthread_mutex_t mutex;
 Task* listOfTasks;
 int counter = 0;
 double localComplexity = 0;
 
 void executeTask(Task* task, int rank) {
-    pthread_mutex_lock(&mutex);
-    // printf("Worker %d: Start task %d(%d)\n", rank, task->taskNumber, task->complexity);
-    task->completed = 1;
+    //printf("Worker %d: Start task %d(%d)\n", rank, task->taskNumber, task->complexity);
     counter++;
     localComplexity += task->complexity;
-    pthread_mutex_unlock(&mutex);
     usleep(task->complexity);
 }
 
@@ -43,14 +41,16 @@ int request_task(int request_rank) {
 void* executorTread(void* args) {
     int rank = *((int*) args);
     int size = *((int*) args + 1);
-    //--size;
-    printf("rank: %d\ni = %d, i < %d\n", rank, rank * TASKS / size, rank * TASKS / size + TASKS / size);
+    int startTask = *((int*) args + 2);
+    int finishTask = *((int*) args + 3);
+
     while (1) {
         Task* curTask = NULL;
-        for (int i = rank * TASKS / size; i < rank * TASKS / size + TASKS / size; ++i) {    // TODO проблема в том, что распределяются не все таски, то есть надо бы как-то переделать
+        for (int i = startTask; i < finishTask; ++i) {
             pthread_mutex_lock(&mutex);
             if (!listOfTasks[i].completed) {
                 curTask = &listOfTasks[i];
+                listOfTasks[i].completed = 1;
                 pthread_mutex_unlock(&mutex);
                 break;
             }
@@ -83,6 +83,8 @@ void* executorTread(void* args) {
 void* serverThread(void* args) {
     int rank = *((int*) args);
     int size = *((int*) args + 1);
+    int startTask = *((int*) args + 2);
+    int finishTask = *((int*) args + 3);
     int request;
     MPI_Status status;
 
@@ -93,7 +95,7 @@ void* serverThread(void* args) {
         }
 
         int task_id = -1;
-        for (int i = rank * TASKS / size; i < rank * TASKS / size + TASKS / size; ++i) {
+        for (int i = startTask; i < finishTask; ++i) {
             pthread_mutex_lock(&mutex);
             if (listOfTasks[i].completed == 0) {
                 task_id = i;
@@ -141,9 +143,20 @@ int main(int argc, char* argv[]) {
     }
     MPI_Bcast(listOfTasks, sizeOfTasks, MPI_BYTE, 0, MPI_COMM_WORLD);
 
-    int* threadArgs = (int*) malloc(sizeof(int) * 2);
+    int startTask, finistTask;
+
+    startTask = rank * TASKS / size;
+    finistTask = rank * TASKS / size + TASKS / size;
+        if (TASKS % size && rank == size - 1) {
+            finistTask += TASKS % size;
+    }
+    //printf("rank %d: start at %d, finish at %d\n", rank, startTask, finistTask);
+
+    int* threadArgs = (int*) malloc(sizeof(int) * 4);
     threadArgs[0] = rank;
     threadArgs[1] = size;
+    threadArgs[2] = startTask;
+    threadArgs[3] = finistTask;
     pthread_create(&threads[0], &attrs, executorTread, (void*) threadArgs);
     pthread_create(&threads[1], &attrs, serverThread, (void*) threadArgs);
 
