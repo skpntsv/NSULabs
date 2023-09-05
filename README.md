@@ -1,6 +1,5 @@
 # NSULabs
 
-# Содержание
 
 ## 1️⃣ курс
 
@@ -22,4 +21,10 @@
 
 ### ООП на примере C++
 
+- [Лабораторные работы](https://github.com/ronk101/NSULabs/tree/6214ebb8594ac78d5cd315d1bd8b4ed91b51c0fd/2%20course/OOP/C%2B%2B)
+  
+- [Подготовка к экзамену](https://docs.google.com/document/d/1kzOw-B8z3eBiJurgV6ng_7KfoVlJg0I71NoQ4yITe0Q/edit?usp=sharing)
+
 ### ООП на примере Java
+
+- [Лабораторные работы](https://github.com/ronk101/NSULabs/tree/6214ebb8594ac78d5cd315d1bd8b4ed91b51c0fd/2%20course/OOP/Java)
