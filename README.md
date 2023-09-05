@@ -28,3 +28,11 @@
 ### ООП на примере Java
 
 - [Лабораторные работы](https://github.com/ronk101/NSULabs/tree/6214ebb8594ac78d5cd315d1bd8b4ed91b51c0fd/2%20course/OOP/Java)
+
+### Операционные системы
+
+- [Лабораторные работы](https://github.com/ronk101/NSULabs/tree/815f26078f06188643573823805dc514fcf48809/2%20course/OS)
+
+## 3️⃣ курс
+
+`В процессе обучения....`
