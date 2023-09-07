@@ -1,0 +1,43 @@
+Exp:
+        push    {r3, r4, r5, r6, r7, r8, r9, lr}        @
+        vpush.64        {d8, d9, d10}   @
+        vmov    s20, r0 @ int     @ tmp130, x	;копируем s20 = r0
+        vcvt.f64.s32    d10, s20        @ tmp, tmp130	преобразование из 32 битного ренистра в 64
+        vmov.f64        d16, d10        @ tmp, tmp	копируем в другой 64 битный регистр
+        movs    r4, #1  @ i,	r4 = 1 с флагом
+        movs    r7, #0  @ i,	r7 = 0 с флагом
+        vmov.f64        d8, #1.0e+0     @ <retval>,	тут мы сразу можем положить вещественное число в регистр
+        movw    r8, #33793      @ tmp128,	в нижнюю половину регистра
+        movt    r8, 6103        @ tmp128,	в верхнюю половину регистра
+        mov     r9, r7    @ tmp129, i	r9 = r7
+.L2:
+        vadd.f64        d8, d8, d16     @ <retval>, <retval>, tmp	d8 = d8 + d16
+        vmul.f64        d9, d10, d16    @ _1, tmp, tmp	d9 = d10*d16
+        adds    r6, r4, #1      @ tmp126, i,	r6 = r4 + 1 с флагом
+        adc     r5, r7, #0        @ tmp127, i	сложение с переносом
+        mov     r4, r6    @ i, tmp126
+        mov     r7, r5    @ i, tmp127
+        mov     r0, r6    @, tmp126
+        mov     r1, r5    @, tmp127
+        bl      __aeabi_l2d   @
+        vmov    d17, r0, r1     @ tmp131,
+        vdiv.f64        d16, d9, d17    @ tmp, _1, tmp131
+        cmp     r5, r9    @ tmp127, tmp129
+        it      eq      @
+        cmpeq   r6, r8        @, tmp126, tmp128
+        bne     .L2             @,
+        vmov.f64        d0, d8  @, <retval>
+        vldm    sp!, {d8-d10}   @,
+        pop     {r3, r4, r5, r6, r7, r8, r9, pc}  @
+.LC0:
+        .ascii  "%lf\012\000"
+main:
+        push    {r3, lr}        @ запушили r3 и lr чтоб сохранить их значения и свободно изменять в проге
+        movs    r0, #7  @,		r0 = 7
+        bl      Exp   @
+        vmov    r2, r3, d0      @ tmp117,
+        movw    r0, #:lower16:.LC0      @,
+        movt    r0, #:upper16:.LC0      @,
+        bl      printf          @
+        movs    r0, #0  @,
+        pop     {r3, pc}  @

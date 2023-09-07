@@ -1,0 +1,87 @@
+Exp:
+        pushq   %rbp  # сохраняем указатель кадра вызвавшей программы (помещаем в стек значение в регистре ebp )
+        movq    %rsp, %rbp      # копируем значение из rbp в rsp (формируем указатель нашего кадра)
+        movl    %edi, -36(%rbp) # адрессное значение. Берётся регистр rbp. в память по адресу rbp - 36 записывается edi
+        pxor    %xmm0, %xmm0    # появился векторный регистр pxor - упакованное логическое исключающее ИЛИ (т.е. зануляем регистр xmm0
+        cvtsi2sdl       -36(%rbp), %xmm0 # Используется для преобразования целых чисел с двойным словом в скалярные значения с плавающей запятой двойной точности.
+        movsd   %xmm0, -8(%rbp)       # поместили наше новое число в стек
+        movsd   .LC0(%rip), %xmm0     # rip - адресация относительно кода, адресс текущей команды. присвоили xmm0 вещественную константу
+        movsd   %xmm0, -16(%rbp)      # поместили эту константу в стек
+        movq    $400000000, -32(%rbp)   #, поместили константу в стек
+        movq    $1, -24(%rbp)   #, поместили константу в стек (в условии фора ай)
+        jmp     .L2       #безусловный переход цикла фор
+.L3:
+        movsd   -16(%rbp), %xmm0      # res, tmp91
+        addsd   -8(%rbp), %xmm0       # tmp, tmp90
+        movsd   %xmm0, -16(%rbp)      # tmp90, res
+        pxor    %xmm0, %xmm0    # _1
+        cvtsi2sdl       -36(%rbp), %xmm0      # x, _1
+        mulsd   -8(%rbp), %xmm0       # tmp, _2
+        movq    -24(%rbp), %rax # i, tmp92
+        addq    $1, %rax        #, _3
+        pxor    %xmm1, %xmm1    # _4
+        cvtsi2sdq       %rax, %xmm1   # _3, _4
+        divsd   %xmm1, %xmm0  # _4, tmp93
+        movsd   %xmm0, -8(%rbp)       # tmp93, tmp
+        addq    $1, -24(%rbp)   #, i
+.L2:
+        movq    -24(%rbp), %rax # i, tmp94
+        cmpq    -32(%rbp), %rax # n, tmp94 сравнивается два 8-байтных числа, устанавливаются флаги
+        jle     .L3       #выполняет в зависимости от значений флагов, установленных командной cmpq  (le - не больше L3)
+        movsd   -16(%rbp), %xmm0      # res, _13
+        movq    %xmm0, %rax     # _13, <retval>
+        movq    %rax, %xmm0     # <retval>,
+        popq    %rbp    #
+        ret     
+.LC1:
+        .string "%lf\n"   # константы
+.LC3:
+        .string "Time taken: %lf sec.\n"
+main:
+        pushq   %rbp  #
+        movq    %rsp, %rbp      #,
+        subq    $48, %rsp       #,
+        leaq    -32(%rbp), %rax # 8-байтное. берётся адрессное выр. rbp -32, вычисляется и записывается в rax **просто арифмитическая команда** не обращение в память
+        movq    %rax, %rsi      # tmp94,
+        movl    $4, %edi        #,
+        call    clock_gettime   #
+        movl    $7, %edi        #,
+        call    Exp     #
+        movq    %xmm0, %rax     #, tmp95
+        movq    %rax, -8(%rbp)  # tmp95, e
+        movq    -8(%rbp), %rax  # e, tmp96
+        movq    %rax, %xmm0     # tmp96,
+        movl    $.LC1, %edi     # некоторая константа, копируется в edi
+        movl    $1, %eax        #,
+        call    printf  #
+        leaq    -48(%rbp), %rax #, tmp97
+        movq    %rax, %rsi      # tmp97,
+        movl    $4, %edi        #,
+        call    clock_gettime   #
+        movq    -48(%rbp), %rdx # end.tv_sec, _1
+        movq    -32(%rbp), %rax # start.tv_sec, _2
+        subq    %rax, %rdx      # _2, _3
+        pxor    %xmm1, %xmm1    # _4
+        cvtsi2sdq       %rdx, %xmm1   # _3, _4
+        movq    -40(%rbp), %rdx # end.tv_nsec, _5
+        movq    -24(%rbp), %rax # start.tv_nsec, _6
+        subq    %rax, %rdx      # _6, _7
+        pxor    %xmm2, %xmm2    # _8
+        cvtsi2sdq       %rdx, %xmm2   # _7, _8
+        movsd   .LC2(%rip), %xmm0     #rip - адрес команды
+        mulsd   %xmm2, %xmm0  # _8, _9
+        addsd   %xmm0, %xmm1  # _9, _4
+        movq    %xmm1, %rax     # _4, _10
+        movq    %rax, %xmm0     # _10,
+        movl    $.LC3, %edi     #,
+        movl    $1, %eax        #,
+        call    printf  #
+        movl    $0, %eax        #, _18
+        leave   
+        ret     
+.LC0:
+        .long   0  # 4 битовое число и за ним ещё одно 4 битовое число
+        .long   1072693248   # битовое представление дабла
+.LC2:
+        .long   -400107883
+        .long   1041313291
