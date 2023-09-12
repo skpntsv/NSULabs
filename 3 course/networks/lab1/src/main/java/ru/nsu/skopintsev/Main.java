@@ -10,10 +10,17 @@ IP адресов "живых" копий.
 выбирая протокол автоматически в зависимости от переданного адреса группы.
 
 */
+
 package ru.nsu.skopintsev;
+
+import ru.nsu.skopintsev.utils.ConfigParser;
 
 public class Main {
     public static void main(String[] args) {
-       MulticastDiscovery multicastDiscovery = new MulticastDiscovery();
+        String multicastGroupAddress = ConfigParser.IP;
+        int multicastPort = ConfigParser.PORT;
+
+        MulticastDiscovery discovery = new MulticastDiscovery(multicastGroupAddress, multicastPort);
+        discovery.start();
     }
 }
