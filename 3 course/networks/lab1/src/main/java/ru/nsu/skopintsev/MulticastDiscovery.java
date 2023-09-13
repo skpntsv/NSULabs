@@ -38,10 +38,10 @@ public class MulticastDiscovery {
             InetAddress group = InetAddress.getByName(multicastGroupAddress);
 
             while (true) {
-                String message = "Hello, I'm here!";
-                DatagramPacket packet = new DatagramPacket(message.getBytes(), message.length(), group, multicastPort);
+                byte[] message = { 1 };
+                DatagramPacket packet = new DatagramPacket(message, message.length, group, multicastPort);
                 senderSocket.send(packet);
-                Thread.sleep(2000);
+                Thread.sleep(10000);
             }
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
@@ -53,13 +53,17 @@ public class MulticastDiscovery {
             InetAddress group = InetAddress.getByName(multicastGroupAddress);
             receiveSocket.joinGroup(group);
 
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[1];
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
             while (true) {
                 receiveSocket.receive(packet);
-                String receivedMessage = new String(packet.getData(), 0, packet.getLength());
-                System.out.println("Received message from " + packet.getAddress() + ": " + receivedMessage);
+                byte receivedMessageType = packet.getData()[0];
+                switch (receivedMessageType) {
+                    case 1 -> System.out.println("Received MUDAK Report message from " + packet.getAddress());
+                    case 2 -> System.out.println("Received MUDAK Leave message from " + packet.getAddress());
+                    default -> System.out.println("Received unknown message from " + packet.getAddress());
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
