@@ -9,10 +9,13 @@ import java.net.MulticastSocket;
 public class MulticastDiscovery {
     private final String multicastGroupAddress;
     private final int multicastPort;
+    private final MudakTable mudakTable;
 
     public MulticastDiscovery(String multicastGroupAddress, int multicastPort) {
         this.multicastGroupAddress = multicastGroupAddress;
         this.multicastPort = multicastPort;
+
+        this.mudakTable = new MudakTable();
     }
 
     public void start() {
@@ -60,10 +63,18 @@ public class MulticastDiscovery {
                 receiveSocket.receive(packet);
                 byte receivedMessageType = packet.getData()[0];
                 switch (receivedMessageType) {
-                    case 1 -> System.out.println("Received MUDAK Report message from " + packet.getAddress());
-                    case 2 -> System.out.println("Received MUDAK Leave message from " + packet.getAddress());
-                    default -> System.out.println("Received unknown message from " + packet.getAddress());
+                    case 1 -> {
+                        System.out.println("Received MUDAK Report message from " + packet.getAddress() + ": " + packet.getPort());
+                        mudakTable.updateEntry(packet.getAddress().getHostAddress() + packet.getPort());
+                    }
+                    case 2 -> {
+                        System.out.println("Received MUDAK Leave message from " + packet.getAddress() + ": " + packet.getPort());
+                        mudakTable.removeEntry(packet.getAddress().getHostAddress());
+                    }
+                    default ->
+                            System.out.println("Received unknown message from " + packet.getAddress() + ": " + packet.getPort());
                 }
+                mudakTable.printTable();
             }
         } catch (IOException e) {
             e.printStackTrace();
