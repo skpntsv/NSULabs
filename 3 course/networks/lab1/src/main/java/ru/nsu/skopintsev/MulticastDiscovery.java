@@ -19,7 +19,7 @@ public class MulticastDiscovery {
     }
 
     public void start() {
-        try (MulticastSocket receiveSocket = new MulticastSocket(multicastPort)) {
+            try (MulticastSocket receiveSocket = new MulticastSocket(multicastPort)) {
             InetAddress group = InetAddress.getByName(multicastGroupAddress);
             receiveSocket.joinGroup(group);
 
@@ -62,19 +62,24 @@ public class MulticastDiscovery {
             while (true) {
                 receiveSocket.receive(packet);
                 byte receivedMessageType = packet.getData()[0];
-                switch (receivedMessageType) {
-                    case 1 -> {
-                        System.out.println("Received MUDAK Report message from " + packet.getAddress() + ": " + packet.getPort());
-                        mudakTable.updateEntry(packet.getAddress().getHostAddress() + packet.getPort());
+                String user = packet.getAddress().getHostAddress() + ":" + packet.getPort();
+                MessageType messageType = MessageType.fromValue(receivedMessageType);
+
+                if (messageType != null) {
+                    switch (messageType) {
+                        case REPORT -> {
+                            System.out.println("Received MUDAK Report message from " + user);
+                            mudakTable.updateEntry(user);
+                        }
+                        case LEAVE -> {
+                            System.out.println("Received MUDAK Leave message from " + user);
+                            mudakTable.removeEntry(user);
+                        }
+                        default -> System.out.println("Received unknown message from " + user);
                     }
-                    case 2 -> {
-                        System.out.println("Received MUDAK Leave message from " + packet.getAddress() + ": " + packet.getPort());
-                        mudakTable.removeEntry(packet.getAddress().getHostAddress());
-                    }
-                    default ->
-                            System.out.println("Received unknown message from " + packet.getAddress() + ": " + packet.getPort());
                 }
                 mudakTable.printTable();
+                mudakTable.killZombie();
             }
         } catch (IOException e) {
             e.printStackTrace();
