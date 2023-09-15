@@ -22,16 +22,14 @@ public class MulticastDiscovery {
         this.mudakTable = new MudakTable();
 
         try {
-            this.senderSocket = new DatagramSocket(); // Инициализация сокса для отправки
+            this.senderSocket = new DatagramSocket();
         } catch (SocketException e) {
             System.err.println("Create datagram socket failed " + e.getMessage());
             throw new RuntimeException("Failed to create DatagramSocket", e);
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Sending LEAVE command before exiting...");
-            sendCommand(MessageType.LEAVE);
-        }));
+        // Корректно завершаем работу программы
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
 
         setScheduler();
     }
@@ -103,5 +101,25 @@ public class MulticastDiscovery {
 
     private void printTable() {
         mudakTable.printTable();
+    }
+
+    private void shutdown() {
+        System.out.println("Shutting down...");
+        sendCommand(MessageType.LEAVE);
+
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdown();
+            try {
+                scheduler.awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                System.err.println("Scheduler termination interrupted: " + e.getMessage());
+            }
+        }
+
+        if (senderSocket != null && !senderSocket.isClosed()) {
+            senderSocket.close();
+        }
+
+        System.out.println("Shutdown complete.");
     }
 }
