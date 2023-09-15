@@ -1,5 +1,7 @@
 package ru.nsu.skopintsev;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -10,12 +12,24 @@ public class MulticastDiscovery {
     private final String multicastGroupAddress;
     private final int multicastPort;
     private final MudakTable mudakTable;
+    private DatagramSocket senderSocket;
 
     public MulticastDiscovery(String multicastGroupAddress, int multicastPort) {
         this.multicastGroupAddress = multicastGroupAddress;
         this.multicastPort = multicastPort;
 
         this.mudakTable = new MudakTable();
+
+        try {
+            this.senderSocket = new DatagramSocket(); // Инициализация сокса для отправки
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Sending LEAVE command before exiting...");
+            sendCommand(MessageType.LEAVE);
+        }));
     }
 
     public void start() {
@@ -31,22 +45,30 @@ public class MulticastDiscovery {
 
             senderThread.join();
             receiverThread.join();
+                
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
     private void sendMulticast() {
-        try (DatagramSocket senderSocket = new DatagramSocket()) {
-            InetAddress group = InetAddress.getByName(multicastGroupAddress);
-
-            while (true) {
-                byte[] message = { 1 };
-                DatagramPacket packet = new DatagramPacket(message, message.length, group, multicastPort);
-                senderSocket.send(packet);
+        while (true) {
+            sendCommand(MessageType.REPORT);
+            try {
                 Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
-        } catch (IOException | InterruptedException e) {
+        }
+    }
+
+    public void sendCommand(@NotNull MessageType commandType) {
+        try {
+            InetAddress group = InetAddress.getByName(multicastGroupAddress);
+            byte[] message = { (byte) commandType.getValue() };
+            DatagramPacket packet = new DatagramPacket(message, message.length, group, multicastPort);
+            senderSocket.send(packet);
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -72,14 +94,14 @@ public class MulticastDiscovery {
                             mudakTable.updateEntry(user);
                         }
                         case LEAVE -> {
-                            System.out.println("Received MUDAK Leave message from " + user);
+                            System.err.println("Received MUDAK Leave message from " + user);
                             mudakTable.removeEntry(user);
                         }
                         default -> System.out.println("Received unknown message from " + user);
                     }
                 }
-                mudakTable.printTable();
                 mudakTable.killZombie();
+                mudakTable.printTable();
             }
         } catch (IOException e) {
             e.printStackTrace();

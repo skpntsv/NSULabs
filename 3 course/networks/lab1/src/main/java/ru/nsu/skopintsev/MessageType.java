@@ -10,6 +10,10 @@ enum MessageType {
         this.value = value;
     }
 
+    public int getValue() {
+        return value;
+    }
+
     public static MessageType fromValue(int value) {
         for (MessageType type : values()) {
             if (type.value == value) {
