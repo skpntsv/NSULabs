@@ -36,8 +36,11 @@ public class MulticastDiscovery {
 
     public void start() {
         try (MulticastSocket receiveSocket = new MulticastSocket(multicastPort)) {
+            NetworkInterface networkInterface = NetworkInterface.getByName("eth0");
+            receiveSocket.setNetworkInterface(networkInterface);
+
             InetAddress group = InetAddress.getByName(multicastGroupAddress);
-            receiveSocket.joinGroup(group);
+            receiveSocket.joinGroup(new InetSocketAddress(group, multicastPort), networkInterface);
 
             receiverMulticast(receiveSocket);
 
@@ -53,6 +56,9 @@ public class MulticastDiscovery {
         while (true) {
             try {
                 receiveSocket.receive(packet);
+                if (isMessageFromMySelf(packet)) {
+                    continue;
+                }
                 byte receivedMessageType = packet.getData()[0];
                 String user = packet.getAddress().getHostAddress() + ":" + packet.getPort();
                 MessageType messageType = MessageType.fromValue(receivedMessageType);
@@ -87,6 +93,7 @@ public class MulticastDiscovery {
             byte[] message = { (byte) commandType.getValue() };
             DatagramPacket packet = new DatagramPacket(message, message.length, group, multicastPort);
             senderSocket.send(packet);
+            senderSocket.getLocalAddress();
         } catch (IOException e) {
             System.err.println("sendCommand error: " + e.getMessage());
         }
@@ -109,11 +116,6 @@ public class MulticastDiscovery {
 
         if (scheduler != null && !scheduler.isShutdown()) {
             scheduler.shutdown();
-            try {
-                scheduler.awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                System.err.println("Scheduler termination interrupted: " + e.getMessage());
-            }
         }
 
         if (senderSocket != null && !senderSocket.isClosed()) {
@@ -121,5 +123,16 @@ public class MulticastDiscovery {
         }
 
         System.out.println("Shutdown complete.");
+    }
+
+    private boolean isMessageFromMySelf(DatagramPacket packet) throws UnknownHostException {
+        InetAddress packetAddress = packet.getAddress();
+        int packetPort = packet.getPort();
+
+        InetAddress localAddress = senderSocket.getLocalAddress();
+        int localPort = senderSocket.getLocalPort();
+
+        return packetPort == localPort;
+        //return packetAddress.equals(localAddress) && packetPort == localPort;
     }
 }
