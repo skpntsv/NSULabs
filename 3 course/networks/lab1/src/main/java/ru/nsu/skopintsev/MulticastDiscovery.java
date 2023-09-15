@@ -3,15 +3,15 @@ package ru.nsu.skopintsev;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.MulticastSocket;
+import java.net.*;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MulticastDiscovery {
     private final String multicastGroupAddress;
     private final int multicastPort;
     private final MudakTable mudakTable;
+    private final Timer timer = new Timer();
     private DatagramSocket senderSocket;
 
     public MulticastDiscovery(String multicastGroupAddress, int multicastPort) {
@@ -22,14 +22,21 @@ public class MulticastDiscovery {
 
         try {
             this.senderSocket = new DatagramSocket(); // Инициализация сокса для отправки
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (SocketException e) {
+            System.err.println("Create datagram socker failed " + e.getMessage());
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Sending LEAVE command before exiting...");
             sendCommand(MessageType.LEAVE);
         }));
+
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                mudakTable.printTable();
+            }
+        }, 1000, 900);
     }
 
     public void start() {
@@ -52,13 +59,15 @@ public class MulticastDiscovery {
     }
 
     private void sendMulticast() {
-        while (true) {
-            sendCommand(MessageType.REPORT);
-            try {
+        try {
+            while (true) {
+                sendCommand(MessageType.REPORT);
                 Thread.sleep(10000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
             }
+        } catch (InterruptedException e) {
+            System.err.println("sendMulticast interrupted: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("sendMulticast error: " + e.getMessage());
         }
     }
 
@@ -69,7 +78,7 @@ public class MulticastDiscovery {
             DatagramPacket packet = new DatagramPacket(message, message.length, group, multicastPort);
             senderSocket.send(packet);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("sendCommand error: " + e.getMessage());
         }
     }
 
@@ -101,10 +110,9 @@ public class MulticastDiscovery {
                     }
                 }
                 mudakTable.killZombie();
-                mudakTable.printTable();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("receiveMulticast error: " + e.getMessage());
         }
     }
 }

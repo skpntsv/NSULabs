@@ -1,6 +1,5 @@
 package ru.nsu.skopintsev;
 
-import java.net.DatagramPacket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -28,7 +27,6 @@ public class MudakTable {
             return TimeUnit.MILLISECONDS.toSeconds(timeDifference) > 20;
         });
     }
-
 
     public void printTable() {
         System.out.println("M.U.D.A.K. Table:");
