@@ -21,23 +21,21 @@ void *mythread(void *arg) {
 int main() {
 	pthread_t tid;
 	int err;
-    
-    struct ThreadData *data = (struct ThreadData *)malloc(sizeof(struct ThreadData));
-    if (data == NULL) {
-        perror("malloc");
-    }
+    struct ThreadData data;
 
-    data->number = 42;
-    data->message = "Hello from main!";
-	printf("main [%d]: Hello from main!\n", getpid());
+    data.number = 42;
+    data.message = "Hello from struct!";
 
-	err = pthread_create(&tid, NULL, mythread, data);
-    pthread_join(tid, NULL);
+	err = pthread_create(&tid, NULL, mythread, &data);
 	if (err) {
 	    printf("main: pthread_create() failed: %s\n", strerror(err));
 		return -1;
 	}
-    
-    free(data);
+
+    if (pthread_join(tid, NULL) != 0) {
+        printf("Main: pthread_join() failed\n");
+        return -1;
+    }
+
 	return 0;
 }

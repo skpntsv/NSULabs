@@ -15,6 +15,8 @@ struct ThreadData {
 void *mythread(void *arg) {
 	struct ThreadData *data = (struct ThreadData*)arg;
     printf("mythread: Number = %d, Message = %s\n", data->number, data->message);
+
+    free(data);
     return NULL;
 }
 
@@ -22,21 +24,26 @@ int main() {
 	pthread_t tid;
 	int err;
     pthread_attr_t attr;
-    struct ThreadData data;
-    
-    data.number = 42;
-    data.message = "Hello from struct!";
+
+    struct ThreadData *data = (struct ThreadData *)malloc(sizeof(struct ThreadData));
+    if (data == NULL) {
+        perror("malloc");
+    }
+
+    data->number = 42;
+    data->message = "Hello from struct!";
 
     printf("main [%d]: Hello from main!\n", getpid());
 
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);  // Устанавливаем detached состояние
 
-	err = pthread_create(&tid, &attr, mythread, &data);
+	err = pthread_create(&tid, &attr, mythread, data);
 	if (err) {
 	    printf("main: pthread_create() failed: %s\n", strerror(err));
 		return -1;
 	}
+
     pthread_attr_destroy(&attr);
     pthread_exit(NULL);
 	return 0;
