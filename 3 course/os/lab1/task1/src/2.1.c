@@ -5,33 +5,43 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdlib.h>
 
-void *mythread(void *arg) {
-	printf("mythread [%d %d %d]: Hello from mythread!\n", getpid(), getppid(), gettid());
+void *thread_with_number(void *arg) {
+    static int number = 42;
+    pthread_exit(&number);
+}
 
-	return (void *)42;              // Возвращение числа 42 в main поток
-    //return (void *)"hello world";   // Возвращение указателя на строку в main
+void *thread_with_message(void *arg) {
+    char *message = "hello world";
+    pthread_exit(message);
 }
 
 int main() {
-	pthread_t tid;
-	int err;
-    void *result;
+    pthread_t tid_number, tid_message;
+    int err;
+    int *number_result;
+    char *message_result;
 
-	printf("main [%d %d %d]: Hello from main!\n", getpid(), getppid(), gettid());
+    printf("main [%d %d %d]: Hello from main!\n", getpid(), getppid(), getpid());
 
-	err = pthread_create(&tid, NULL, mythread, NULL);
-	if (err) {
-	    printf("main: pthread_create() failed: %s\n", strerror(err));
-		return -1;
-	}
+    err = pthread_create(&tid_number, NULL, thread_with_number, NULL);
+    if (err) {
+        printf("main: pthread_create() failed: %s\n", strerror(err));
+        return -1;
+    }
 
-    // Дожидаемся завершения дополнительного потока
-    pthread_join(tid, &result);
+    err = pthread_create(&tid_message, NULL, thread_with_message, NULL);
+    if (err) {
+        printf("main: pthread_create() failed: %s\n", strerror(err));
+        return -1;
+    }
 
+    pthread_join(tid_number, (void **)&number_result);
+    pthread_join(tid_message, (void **)&message_result);
 
-    printf("main: Child thread returned %d\n", (int)result);            // Вывод числа 42
-    //printf("Main thread: Child thread returned: %s\n", (char *)result); // Вывод строки
+    printf("main: Child thread returned %d\n", *number_result);
+    printf("Main thread: Child thread returned: %s\n", message_result);
 
-	return 0;
+    return 0;
 }
