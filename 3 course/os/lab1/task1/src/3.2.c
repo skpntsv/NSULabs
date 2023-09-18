@@ -16,7 +16,6 @@ void *mythread(void *arg) {
 	struct ThreadData *data = (struct ThreadData*)arg;
     printf("mythread: Number = %d, Message = %s\n", data->number, data->message);
 
-    free(data);
     return NULL;
 }
 
@@ -44,6 +43,8 @@ int main() {
 		return -1;
 	}
 
+    sleep(1);
+    free(data);
     pthread_attr_destroy(&attr);
     pthread_exit(NULL);
 	return 0;

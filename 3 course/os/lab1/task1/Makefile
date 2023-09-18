@@ -1,5 +1,5 @@
 TARGET = thread-example
-SRCS = ./src/3.1.c
+SRCS = ./src/3.2.c
 
 CC=gcc
 RM=rm

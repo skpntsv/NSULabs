@@ -13,6 +13,7 @@ void *mythread(void *arg) {
 }
 
 int main() {
+    int k = 0;
     while (1) {
         pthread_t tid;
         int err;
@@ -22,8 +23,9 @@ int main() {
             printf("main: pthread_create() failed: %s\n", strerror(err));
 		    return -1;
         }
-
-        //sleep(1);
+        k++;
+        // 19665
+        printf("k = %d\n", k);
     }
 
     return 0;
