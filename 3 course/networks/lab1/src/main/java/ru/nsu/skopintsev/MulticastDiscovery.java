@@ -36,7 +36,7 @@ public class MulticastDiscovery {
 
     public void start() {
         try (MulticastSocket receiveSocket = new MulticastSocket(multicastPort)) {
-            NetworkInterface networkInterface = NetworkInterface.getByName("eth0");
+            NetworkInterface networkInterface = NetworkInterface.getByName("wlan1");
             receiveSocket.setNetworkInterface(networkInterface);
 
             InetAddress group = InetAddress.getByName(multicastGroupAddress);
@@ -93,7 +93,6 @@ public class MulticastDiscovery {
             byte[] message = { (byte) commandType.getValue() };
             DatagramPacket packet = new DatagramPacket(message, message.length, group, multicastPort);
             senderSocket.send(packet);
-            senderSocket.getLocalAddress();
         } catch (IOException e) {
             System.err.println("sendCommand error: " + e.getMessage());
         }
@@ -103,7 +102,7 @@ public class MulticastDiscovery {
         scheduler = Executors.newScheduledThreadPool(2);
 
         scheduler.scheduleAtFixedRate(this::printTable, 1000, 900, TimeUnit.MILLISECONDS);
-        scheduler.scheduleAtFixedRate(this::sendMulticast, 1, 10, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::sendMulticast, 1, 1, TimeUnit.SECONDS);
     }
 
     private void printTable() {
