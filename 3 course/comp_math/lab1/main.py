@@ -1,56 +1,102 @@
-from math import sqrt
-import sys
+# -*- coding: utf-8 -*-
 
-def f(x, a, b, c):
+import math
+
+a, b, c, epsilon = map(float, input("Введите значения a, b, c и epsilon через пробел: ").split())
+delta = 1000
+
+
+def f(x):
     return x**3 + a * x**2 + b * x + c
 
-def find_extremes(a, b, c):
-    discriminant = find_discriminant(a, b, c)
-    alpha = (-b - sqrt(discriminant)) / a
-    betta = (-b + sqrt(discriminant)) / a
+def find_extremes():
+    discriminant = a**2 - 3 * b
+    y0 = -discriminant / 3
 
-    if (alpha > betta):
-        tmp = alpha
-        alpha = betta
-        betta = tmp
+    if y0 >= epsilon:
+        return None, None
 
-    return alpha, betta
+    extreme1 = (-a - math.sqrt(discriminant)) / 3
+    extreme2 = (-a + math.sqrt(discriminant)) / 3
 
-def find_discriminant(a, b, c):
-    discriminant = b * b - a * c
+    return extreme1, extreme2
 
-    return discriminant
+def find_border(border1, toRight):
+    value1 = f(border1)
+    step = delta if toRight else -delta
+    border2 = border1 + step
 
-def bisection_method(a, b, c, epsilon):
-    # if (find_discriminant < -epsilon):
-    #     count_of_roots = 1      # 1 корень
+    while value1 * f(border2) > 0:
+        border2 += step
 
-    alpha, betta = find_extremes(3, 2 * a, b)
-    
-    intervals = [(sys.float_info.min, alpha), (alpha, betta), (betta, 1000000)]
-    roots = []
+    return border2
 
-    for interval in intervals:
-        a_interval, b_interval = interval
-        if (f(a_interval, a, b, c) * f(b_interval, a, b, c)) < 0:
-            while abs(b_interval - a_interval) < epsilon:
-                if (f((b_interval - a_interval) / 2, a, b, c) * f(b_interval, a, b, c)) < 0:
-                    b_interval = (b_interval - a_interval) / 2
-                else:
-                    a_interval = (b_interval - a_interval) / 2
-            roots.append(a_interval)    
+def dichotomy_method(border1, border2):
+    f1 = f(border1)
+    f2 = f(border2)
 
-    return roots
+    if abs(f1) < epsilon:
+        return border1
+    if abs(f2) < epsilon:
+        return border2
 
-a = float(input("Введите значение коэффициента a: "))
-b = float(input("Введите значение коэффициента b: "))
-c = float(input("Введите значение коэффициента c: "))
+    while True:
+        c = (border1 + border2) / 2
+        f_midlle = f(c)
 
-epsilon = float(input("Введите значение epsilon: "))
+        if abs(f_midlle) < epsilon:
+            return c
+        if f1 * f_midlle < 0:
+            border2 = c
+        else:
+            border1 = c
+            f1 = f_midlle
 
-roots = bisection_method(a, b, c, epsilon)
+alpha, betta = find_extremes()
+roots = []
+
+if alpha is None:
+    border1 = 0
+    f_0 = f(border1)
+    if abs(f_0) < epsilon:
+        roots.append((border1, 3))
+    elif f_0 < -epsilon:
+        border2 = find_border(0, True)
+        roots.append((dichotomy_method(border1, border2), 1))
+    else:
+        border2 = find_border(0, False)
+        roots.append((dichotomy_method(border1, border2), 1))
+else:
+    f1 = f(alpha)
+    f2 = f(betta)
+
+    if f1 >= epsilon and f2 >= epsilon:
+        border1 = find_border(alpha, False)
+        roots.append((dichotomy_method(border1, alpha), 1))
+    elif f1 <= -epsilon and f2 <= -epsilon:
+        border2 = find_border(betta, True)
+        roots.append((dichotomy_method(alpha, border2), 1))
+    elif abs(f1) < epsilon and abs(f2) < epsilon:
+        roots.append((alpha, 3))  
+    elif f1 >= epsilon and abs(f2) < epsilon:
+        border1 = find_border(alpha, False)
+        roots.append((dichotomy_method(border1, alpha), 1))  
+        roots.append((betta, 2))  
+    elif abs(f1) < epsilon and f2 <= -epsilon:
+        border2 = find_border(betta, True)
+        roots.append((alpha, 2)) 
+        roots.append((dichotomy_method(betta, border2), 1))
+    elif f1 >= epsilon and f2 <= -epsilon:
+        border1 = find_border(alpha, False)
+        border2 = find_border(betta, True)
+        roots.append((dichotomy_method(border1, alpha), 1))
+        roots.append((dichotomy_method(alpha, betta), 1))
+        roots.append((dichotomy_method(betta, border2), 1))
 
 if roots:
-    print(f"Корни кубического уравнения: {roots}")
+    print("-----------------------------------")
+    for root, multiplicity in roots:
+        print(f"Корень: {root}, Кратность: {multiplicity}")
+    print("-----------------------------------")
 else:
-    print("Уравнение не имеет корней.")
+    print("Нет корней")
