@@ -14,7 +14,7 @@ with open(filename, "r") as file:
 data = np.unique(data)
 
 # Добавление двух дополнительных точек
-data = np.concatenate(([-np.inf, np.min(data)], data))
+data = np.concatenate(([np.min(data)], data))
 
 # Вычисление значений эмпирической функции распределения
 y = np.arange(0, len(data)) / (len(data) - 1)
