@@ -5,27 +5,31 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Server {
-    private final int PORT = 1234;
+    private final int PORT;
 
-    public Server() {
+    public Server(int port) {
+        this.PORT = port;
         start();
     }
 
     public void start() {
-        try (ServerSocket server = new ServerSocket(PORT)) {
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Сервер запущен и ожидает подключения к порту:" + PORT);
 
-            while (!server.isClosed()) {
-                Socket client = server.accept();
-                System.out.println("Connection accepted: " + client.getInetAddress() + ":" + client.getPort());
+            while (!serverSocket.isClosed()) {
+                try {
+                    Socket clientSocket = serverSocket.accept();
+                    System.out.println("Подключился новый клиент: " + clientSocket.getInetAddress());
 
-                ClientHandler clientHandler = new ClientHandler(client);
-                Thread clientThread = new Thread(clientHandler);
-                clientThread.start();
+                    ClientHandler clientHandler = new ClientHandler(clientSocket);
+                    Thread clientThread = new Thread(clientHandler);
+                    clientThread.start();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.out.println("Не удалось создать сокет " + e.getMessage());
         }
     }
 }
