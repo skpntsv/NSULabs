@@ -1,5 +1,5 @@
 TARGET = thread-example
-SRCS = ./src/3.2.c
+SRCS = ./src/4.2.c
 
 CC=gcc
 RM=rm
@@ -11,6 +11,9 @@ all: ${TARGET}
 
 ${TARGET}: ${SRCS}
 	${CC} ${CFLAGS} -I${INCLUDE_DIR} ${SRCS} ${LIBS} -o ${TARGET}
+
+run:
+	./${TARGET}
 
 clean:
 	${RM} -f *.o ${TARGET}
