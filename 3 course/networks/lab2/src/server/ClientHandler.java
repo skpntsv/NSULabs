@@ -1,8 +1,8 @@
 package server;
 
+import utils.FileTransferProtocol;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 
 public class ClientHandler implements Runnable {
@@ -10,20 +10,27 @@ public class ClientHandler implements Runnable {
 
     public ClientHandler(Socket clientSocket) {
         this.clientSocket = clientSocket;
-
-        try (OutputStream outputStream = clientSocket.getOutputStream();
-             InputStream inputStream = clientSocket.getInputStream()) {
-            while(!clientSocket.isClosed()) {
-                System.out.println("Server read from channel");
-            }
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Override
     public void run() {
+        try {
+            FileTransferProtocol protocol = new FileTransferProtocol(clientSocket);
+            protocol.receiveFile();
 
+            clientSocket.close();
+            System.out.println("Клиент отключился: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
+        } catch (IOException e) {
+            System.err.println("Ошибка при обработке клиента: " + e.getMessage());
+        } finally {
+            try {
+                if (!clientSocket.isClosed()) {
+                    clientSocket.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Клиент отключился: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
+        }
     }
 }
