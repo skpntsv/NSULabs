@@ -3,12 +3,26 @@ package server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class Server {
     private final int PORT;
 
     public Server(int port) {
         this.PORT = port;
+
+        String savePath = "./uploads";
+        Path directoryPath = Paths.get(savePath);
+        if (!Files.exists(directoryPath)) {
+            try {
+                Files.createDirectories(directoryPath);
+            } catch (IOException e) {
+                System.err.println("Не удалось создать директорию" + e.getMessage());
+            }
+        }
+
         start();
     }
 

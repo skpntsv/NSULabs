@@ -16,7 +16,7 @@ public class ClientHandler implements Runnable {
     public void run() {
         try {
             FileTransferProtocol protocol = new FileTransferProtocol(clientSocket);
-            protocol.receiveFile();
+            protocol.receiveFile("./uploads");
 
             clientSocket.close();
             System.out.println("Клиент отключился: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
