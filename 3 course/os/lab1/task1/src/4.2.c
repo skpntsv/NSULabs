@@ -6,10 +6,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+int k = 0;
+
 void *thread_loop(void *arg) {
 	while(1) {
-        printf("%s\n", "Hello world!");
-        
+        k++;
+
         pthread_testcancel();
     }
 

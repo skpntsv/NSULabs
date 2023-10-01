@@ -5,15 +5,23 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdlib.h>
 
-void *thread_loop(void *arg) {
+void my_free(void* arg){
+	free(arg);
+	printf("successful cleaning memory\n");
+}
+
+void *thread_malloc(void* arg){
+	char* hello = (char*)malloc(sizeof(char) * 13);
+	strcpy(hello, "Hello world\n");
+	
+	pthread_cleanup_push(my_free, hello);
 	while(1) {
-        printf("%s\n", "Hello world!");
-        
-        pthread_testcancel();
-    }
+		printf("%s", hello);
+	}
 
-    return NULL;
+	pthread_cleanup_pop(1);
 }
 
 int main() {
@@ -22,7 +30,7 @@ int main() {
 
 	printf("main [%d]: Hello from main!\n", getpid());
 
-	err = pthread_create(&tid, NULL, thread_loop, NULL);
+	err = pthread_create(&tid, NULL, thread_malloc, NULL);
 	if (err) {
 	    printf("main: pthread_create() failed: %s\n", strerror(err));
 		return -1;
