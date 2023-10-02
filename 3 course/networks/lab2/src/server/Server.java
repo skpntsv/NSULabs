@@ -28,7 +28,7 @@ public class Server {
 
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            System.out.println("Сервер запущен и ожидает подключения: " + serverSocket.getInetAddress() + ": " + serverSocket.getLocalPort());
+            System.out.println("Сервер запущен и ожидает подключения: " + serverSocket.getLocalPort());
 
             while (!serverSocket.isClosed()) {
                 try {

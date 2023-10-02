@@ -69,11 +69,17 @@ public class FileTransferProtocol {
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - startTime >= 3000 || totalBytesReceived == fileSize) {
                     long elapsedTime = currentTime - startTime;
-                    double instantSpeed = (double) bytesRead / (double) elapsedTime * 1000; // байтов в секунду
-                    double averageSpeed = (double) totalBytesReceived / (double) elapsedTime * 1000; // байтов в секунду
+                    double instantSpeedBytesPerSec = (double) bytesRead / (double) elapsedTime * 1000; // байтов в секунду
+                    double averageSpeedBytesPerSec = (double) totalBytesReceived / (double) elapsedTime * 1000; // байтов в секунду
 
-                    System.out.println("Мгновенная скорость приема: " + instantSpeed + " байт/сек");
-                    System.out.println("Средняя скорость за сеанс: " + averageSpeed + " байт/сек");
+                    double instantSpeedMBPerSec = instantSpeedBytesPerSec / (1024 * 1024); // мегабайтов в секунду
+                    double averageSpeedMBPerSec = averageSpeedBytesPerSec / (1024 * 1024); // мегабайтов в секунду
+
+                    double percentComplete = ((double) totalBytesReceived / (double) fileSize) * 100.0; // процент загрузки
+
+                    System.out.println("Мгновенная скорость приема (" + fileName + "): " + instantSpeedMBPerSec + "\tМБ/сек");
+                    System.out.println("Средняя скорость за сеанс (" + fileName + "): " + averageSpeedMBPerSec + "\tМБ/сек");
+                    System.out.println("Прогресс загрузки (" + fileName + "): " + percentComplete + "\t\t%");
 
                     startTime = currentTime;
                 }
@@ -82,8 +88,10 @@ public class FileTransferProtocol {
 
             if (totalBytesReceived == fileSize) {
                 dataOutputStream.writeBoolean(true); // Успех
+                System.out.println("Файл принят успешно");
             } else {
                 dataOutputStream.writeBoolean(false); // Неудача
+                System.out.println("Файл сломался");
             }
             dataOutputStream.flush();
         }
