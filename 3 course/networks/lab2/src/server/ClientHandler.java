@@ -19,7 +19,7 @@ public class ClientHandler implements Runnable {
             protocol.receiveFile("./uploads");
 
             clientSocket.close();
-            System.out.println("Клиент отключился: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
+            //System.out.println("Клиент отключился: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
         } catch (IOException e) {
             System.err.println("Ошибка при обработке клиента: " + e.getMessage());
         } finally {
@@ -30,7 +30,7 @@ public class ClientHandler implements Runnable {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            System.out.println("Клиент отключился: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
+            System.out.println("Клиент отключился: " + clientSocket.getInetAddress().getHostAddress() + ": " + clientSocket.getPort());
         }
     }
 }

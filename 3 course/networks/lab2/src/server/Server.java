@@ -28,12 +28,12 @@ public class Server {
 
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            System.out.println("Сервер запущен и ожидает подключения к порту:" + PORT);
+            System.out.println("Сервер запущен и ожидает подключения: " + serverSocket.getInetAddress() + ": " + serverSocket.getLocalPort());
 
             while (!serverSocket.isClosed()) {
                 try {
                     Socket clientSocket = serverSocket.accept();
-                    System.out.println("Подключился новый клиент: " + clientSocket.getInetAddress());
+                    System.out.println("Подключился новый клиент: " + clientSocket.getInetAddress().getHostAddress() + ": " + clientSocket.getPort());
 
                     ClientHandler clientHandler = new ClientHandler(clientSocket);
                     Thread clientThread = new Thread(clientHandler);
