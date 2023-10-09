@@ -12,7 +12,7 @@ void *thread_loop(void *arg) {
 	while(1) {
         k++;
 
-        pthread_testcancel();
+        //pthread_testcancel();
     }
 
     return NULL;

@@ -9,8 +9,6 @@
 void *thread_loop(void *arg) {
 	while(1) {
         printf("%s\n", "Hello world!");
-        
-        pthread_testcancel();
     }
 
     return NULL;
