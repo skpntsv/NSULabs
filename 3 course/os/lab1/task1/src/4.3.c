@@ -15,7 +15,7 @@ void my_free(void* arg){
 void *thread_malloc(void* arg){
 	char* hello = (char*)malloc(sizeof(char) * 13);
 	strcpy(hello, "Hello world\n");
-	
+
 	pthread_cleanup_push(my_free, hello);
 	while(1) {
 		printf("%s", hello);
