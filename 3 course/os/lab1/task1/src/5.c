@@ -27,13 +27,13 @@ void *thread_1(void* arg){
 	return NULL;
 }
 
-void handler(int sig){
-	printf("Signal received: %d\n",sig);
+void sigint_handler(int sig){
+	printf("Signal received: %d\n", sig);
 }
 
 void *thread_2(void * arg){
-	signal(SIGINT, handler);
-    sleep(100);
+	signal(SIGINT, sigint_handler);
+
 	return NULL;
 }
 
@@ -49,7 +49,7 @@ void *thread_3(void * arg){
         perror("thread_3: sigaddset failed");
         return NULL;
     }
-    
+
 	pthread_sigset(SIG_BLOCK, &set, NULL);
 	
 	printf("thread_3: third thread is waitng a SIGQUIT signal\n");
@@ -73,15 +73,14 @@ int main(){
     pthread_create(&tid2, NULL, thread_2, NULL);
     pthread_create(&tid3, NULL, thread_3, NULL);
 
-    sleep(100);
-
-
    pthread_kill(tid1,SIGINT);
    sleep(2);
    pthread_kill(tid2,SIGINT);
    sleep(2);
    pthread_kill(tid3,SIGQUIT);
    sleep(2);
+
+   // останавливать с помощью консоли (на клавиатуре)
 
 
     pthread_exit(0);
