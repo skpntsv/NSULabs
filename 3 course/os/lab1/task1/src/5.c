@@ -55,13 +55,13 @@ void *thread_3(void * arg) {
 
     printf("thread_3: thread is waiting for a SIGQUIT signal\n");
 
-    if (sigwait(&set, &sig) != 0) {
-        perror("thread_3: sigwait() failed");
-        return NULL;
+    while (1) {
+        if (sigwait(&set, &sig) != 0) {
+            perror("thread_3: sigwait() failed");
+            return NULL;
+        }
+        printf("thread_3: thread received SIGQUIT signal: %d\n", sig);
     }
-
-    printf("thread_3: thread received SIGQUIT signal: %d\n", sig);
-
     return NULL;
 }
 
