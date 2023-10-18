@@ -4,7 +4,7 @@ import math
 
 a, b, c, epsilon = map(float, input("Введите значения a, b, c и epsilon через пробел: ").split())
 delta = 1000
-
+iterations = 0
 
 def f(x):
     return x**3 + a * x**2 + b * x + c
@@ -32,6 +32,8 @@ def find_border(border1, toRight):
     return border2
 
 def dichotomy_method(border1, border2):
+    global iterations
+
     f1 = f(border1)
     f2 = f(border2)
 
@@ -41,6 +43,8 @@ def dichotomy_method(border1, border2):
         return border2
 
     while True:
+        iterations += 1
+
         c = (border1 + border2) / 2
         f_midlle = f(c)
 
@@ -97,6 +101,7 @@ if roots:
     print("-----------------------------------")
     for root, multiplicity in roots:
         print(f"Корень: {root}, Кратность: {multiplicity}")
+    print(f"\nКоличество итераций равно {iterations}")
     print("-----------------------------------")
 else:
     print("Нет корней")
