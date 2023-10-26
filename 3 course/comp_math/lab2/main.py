@@ -74,7 +74,8 @@ class SimpsonCalculator(IntegralCalculator):
 def main():
     args = input().split()
     precision_scale = 100 # Число знаков после запятой при подсчёте
-    scale = 10 # Число знаков после запятой при выводе
+    output_scale = 10 # Число знаков после запятой при выводе
+
     if len(args) == 1:
         num_of_elementary_segments = int(args[0])
     elif len(args) == 2:
@@ -90,14 +91,21 @@ def main():
     simpson_calculator = SimpsonCalculator(precision_scale)
     quadrature_formula_calculator = QuadratureFormulaCalculator(precision_scale)
 
-    print(f"Метод трапеции: {trapezoidal_calculator.calculate_integral(num_of_elementary_segments)}")
-    print(f"Точность: {trapezoidal_calculator.calculate_accuracy_of_method_by_runge_rule(num_of_elementary_segments)}")
+    trapezoidal_result = trapezoidal_calculator.calculate_integral(num_of_elementary_segments)
+    trapezoidal_accuracy = trapezoidal_calculator.calculate_accuracy_of_method_by_runge_rule(num_of_elementary_segments)
+    print(f"Метод трапеции: {trapezoidal_result:.{output_scale}f}")
+    print(f"Точность: {trapezoidal_accuracy:.{output_scale}f}")
 
-    print(f"Метод параболы: {simpson_calculator.calculate_integral(num_of_elementary_segments)}")
-    print(f"Точность: {simpson_calculator.calculate_accuracy_of_method_by_runge_rule(num_of_elementary_segments)}")
+    simpson_result = simpson_calculator.calculate_integral(num_of_elementary_segments)
+    simpson_accuracy = simpson_calculator.calculate_accuracy_of_method_by_runge_rule(num_of_elementary_segments)
+    print(f"Метод параболы: {simpson_result:.{output_scale}f}")
+    print(f"Точность: {simpson_accuracy:.{output_scale}f}")
 
-    print(f"Квадратурная формула: {quadrature_formula_calculator.calculate_integral(num_of_elementary_segments)}")
-    print(f"Точность: {quadrature_formula_calculator.calculate_accuracy_of_method_by_runge_rule(num_of_elementary_segments)}")
+    quadrature_result = quadrature_formula_calculator.calculate_integral(num_of_elementary_segments)
+    quadrature_accuracy = quadrature_formula_calculator.calculate_accuracy_of_method_by_runge_rule(num_of_elementary_segments)
+    print(f"Квадратурная формула: {quadrature_result:.{output_scale}f}")
+    print(f"Точность: {quadrature_accuracy:.{output_scale}f}")
 
 if __name__ == "__main__":
     main()
+
