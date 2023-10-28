@@ -41,7 +41,7 @@ int mythread_startup(void *arg) {
     while(!mythread->joined) {
         usleep(1);
     }
-    printf("thread_startup: the thread func finished for the thread %d\n", mythread->id);
+    printf("mythread_startup: the thread func finished for the thread %d\n", mythread->id);
 
     return 0;
 }
@@ -165,6 +165,7 @@ int main() {
     if (err == -1) {
         fprintf(stderr, "mythread_create() failed\n");
     }
+
     mythread_join(mytid, &retval);
 
     printf("main [%d] thread returned %s\n", getpid(), (char*)retval);
