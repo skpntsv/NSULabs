@@ -8,6 +8,8 @@ CFLAGS=-Wall
 LIBS=
 LDFLAGS=-o $@
 
+TMPFILES=.stack.*
+
 all: $(EXECUTABLES)
 
 $(EXECUTABLES): %: $(SOURCES)%$(TYPE)
@@ -17,4 +19,4 @@ run: $(EXECUTABLES)
 	./${EXECUTABLES}
 
 clean:
-	${RM} -f *.o $(EXECUTABLES)
+	${RM} -f *.o $(TMPFILES) $(EXECUTABLES)

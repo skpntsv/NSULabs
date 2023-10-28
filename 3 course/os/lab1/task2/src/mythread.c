@@ -1,4 +1,6 @@
+#define _GNU_SOURCE
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -6,60 +8,139 @@
 #include <sys/mman.h>
 #include <sched.h>
 #include <fcntl.h>
+#include <linux/sched.h>
 
 #define PAGE 4096
-#define STACK_SIZE (PAGE * 8)
+#define STACK_SIZE (PAGE * 5)
 
-typedef struct Mythread_t {
-    int             id;
+typedef void *(*start_routine_t)(void*);
 
-    volatile int    finished;
-    volatile int    joined;
-} mythread_t;
+typedef struct _mythread_t {
+    int              id;
+    start_routine_t  start_routine;
+    void*            arg;
+    void*            retval;
+
+    volatile int     joined;
+    volatile int     finished;
+} mythread_struct_t;
+
+typedef mythread_struct_t *mythread_t;
 
 int mythread_startup(void *arg) {
+    mythread_struct_t *mythread = (mythread_t)arg;
+    void *retval;
 
-    arg->mythread_func(...);
+    printf("mythread_startup: starting a thread func for the thread %d\n", mythread->id);
+    retval = mythread->start_routine(mythread->arg);
 
+    mythread->retval = retval;
+    mythread->finished = 1;
+
+    printf("mythread_startup: waiting for join() the thread %d\n", mythread->id);
+    while(mythread->joined) {
+        sleep(1);
+    }
+    printf("thread_startup: the thread func finished for the thread %d\n", mythread->id);
+
+    return 0;
 }
 
-void *create_stack(off_t size, int thread_num) {
+void *create_stack(off_t size, int mythread_id) {
     int stack_fd;
     void* stack;
+    char stack_file[128];
 
-    char* stack_file;
-    snprintf(stack_file , sizeof(stack_file), "stack-%d", thread_num);
+    snprintf(stack_file , sizeof(stack_file), ".stack.%d", mythread_id);
 
     stack_fd = open(stack_file, O_RDWR | O_CREAT, 0660);
-    ftruncate(stack_fd, 0);
-    ftruncate(stack_fd, size);
-
-    stack = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, stack_fd, 0);
-    if (stack == MAP_FAILED) {
-        perror("mmap");
-
-        return -1;
+    if (stack_fd == -1) {
+        perror("open stack_fd");
+        return NULL;
     }
-    close(stack_fd);
+    if (ftruncate(stack_fd, 0) == -1) {
+        perror("ftruncate");
+        return NULL;
+    }
+    if (ftruncate(stack_fd, size) == -1) {
+        perror("ftruncate");
+        return NULL;
+    }
 
-    memset(stack, 0x7f, size);
+    stack = mmap(NULL, size, PROT_WRITE | PROT_READ, MAP_SHARED, stack_fd, 0);
+    if (stack == MAP_FAILED) {
+       perror("mmap");
+        return NULL;
+    }
 
+    if (close(stack_fd) == -1) {
+        perror("close stack_fd");
+        return NULL;
+    }
+
+    memset(stack, 0x7f, size);    // необяз
+    
     return stack;
 }
 
-int mythread_create(mythread_t thread, void *(start_routine), void *arg) {
-    static int thread_num = 0;
+int mythread_create(mythread_t *mytid, void *(start_routine) (void *), void *arg) {
+    static int mythread_id = 0;
+    mythread_t mythread;
+    int child_pid;
+    void *child_stack;
+    int flags;
 
-    thread_num++; 
+    mythread_id++; 
 
-    int child_stack = create_stack(STACK_SIZE, thread_num);
+    printf("mythread_create: creating thread %d\n", mythread_id);
 
-    int child_pid = clone(mythread_startup, child_stack + STACK_SIZE, CLONE_VM | CLONE_FILES | CLONE_THREAD | CLONE_SIGHAND | SIGCHLD, NULL);
-    if (child_pid == -1) {
-        perror("clone");
-
+    child_stack = create_stack(STACK_SIZE, mythread_id);
+    if (child_stack == NULL) {
+        fprintf(stderr, "create_stack() failed\n");
         return -1;
     }
+    
+    mprotect(child_stack + PAGE, STACK_SIZE - PAGE, PROT_READ | PROT_WRITE);
+    memset(child_stack + PAGE, 0x7f, STACK_SIZE - PAGE);
+
+    mythread = (mythread_struct_t*)(child_stack + STACK_SIZE - sizeof(mythread_struct_t));
+    mythread->id = mythread_id;
+    mythread->start_routine = start_routine;
+    mythread->arg = arg;
+    mythread->retval = NULL;
+    mythread->joined = 0;
+    mythread->finished = 0;
+
+    child_stack = (void *)mythread;
+
+    printf("child stack %p; mythread_struct %p; \n", child_stack, mythread);
+
+    flags = CLONE_VM | CLONE_FILES | 
+            CLONE_THREAD | CLONE_SIGHAND;
+    child_pid = clone(mythread_startup, child_stack, flags, (void*)mythread);
+    if (child_pid == -1) {
+        perror("clone");
+        return -1;
+    }
+    *mytid = mythread;
+
+    return 0;
+}
+
+int mythread_join(mythread_t mytid, void **retval) {
+    mythread_t mythread = mytid;
+
+    while (!mythread->finished) {
+        sleep(1);
+    }
+    
+    printf("mythread_join: the thread [%d] finished\n", mythread->id);
+
+    *retval = mythread->retval;
+
+    mythread->joined = 1;
+
+    return 0;
 }
 
 void *mythread(void *arg) {
@@ -69,12 +150,22 @@ void *mythread(void *arg) {
         printf("mythread: %s\n", str);
         sleep(1);
     }
+
+    return "bay";
 }
 
 int main() {
-    mythread_t tid;
+    mythread_t mytid;
+    void *retval;
 
-    mythread_create(tid, mythread, "hello from main");
+    printf("main [%d]\n", getpid());
+
+    mythread_create(&mytid, mythread, "hello from main");
+
+    mythread_join(mytid, &retval);
+    printf("ну когда ты там закончишь уже..");
+
+    printf("main [%d] thread returned %s\n", getpid(), (char*)retval);
 
 	return 0;
 }
