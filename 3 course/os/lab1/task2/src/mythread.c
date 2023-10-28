@@ -38,8 +38,8 @@ int mythread_startup(void *arg) {
     mythread->finished = 1;
 
     printf("mythread_startup: waiting for join() the thread %d\n", mythread->id);
-    while(mythread->joined) {
-        sleep(1);
+    while(!mythread->joined) {
+        usleep(1);
     }
     printf("thread_startup: the thread func finished for the thread %d\n", mythread->id);
 
@@ -77,8 +77,6 @@ void *create_stack(off_t size, int mythread_id) {
         perror("close stack_fd");
         return NULL;
     }
-
-    memset(stack, 0x7f, size);    // необяз
     
     return stack;
 }
@@ -99,8 +97,10 @@ int mythread_create(mythread_t *mytid, void *(start_routine) (void *), void *arg
         fprintf(stderr, "create_stack() failed\n");
         return -1;
     }
-    
-    mprotect(child_stack + PAGE, STACK_SIZE - PAGE, PROT_READ | PROT_WRITE);
+    if (mprotect(child_stack + PAGE, STACK_SIZE - PAGE, PROT_READ | PROT_WRITE) == -1) {
+        perror("mprotect");
+        return -1;
+    }
     memset(child_stack + PAGE, 0x7f, STACK_SIZE - PAGE);
 
     mythread = (mythread_struct_t*)(child_stack + STACK_SIZE - sizeof(mythread_struct_t));
@@ -131,7 +131,7 @@ int mythread_join(mythread_t mytid, void **retval) {
     mythread_t mythread = mytid;
 
     while (!mythread->finished) {
-        sleep(1);
+        usleep(1);
     }
     
     printf("mythread_join: the thread [%d] finished\n", mythread->id);
@@ -156,14 +156,16 @@ void *mythread(void *arg) {
 
 int main() {
     mythread_t mytid;
+    int err;
     void *retval;
 
     printf("main [%d]\n", getpid());
 
-    mythread_create(&mytid, mythread, "hello from main");
-
+    err = mythread_create(&mytid, mythread, "hello from main");
+    if (err == -1) {
+        fprintf(stderr, "mythread_create() failed\n");
+    }
     mythread_join(mytid, &retval);
-    printf("ну когда ты там закончишь уже..");
 
     printf("main [%d] thread returned %s\n", getpid(), (char*)retval);
 
