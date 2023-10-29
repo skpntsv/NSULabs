@@ -85,7 +85,7 @@ void *create_stack(off_t size, int mythread_id) {
 
     if (mprotect(stack, STACK_SIZE, PROT_READ | PROT_WRITE) == -1) {
         perror("mprotect");
-        return -1;
+        return NULL;
     }
     
     return stack;
