@@ -3,41 +3,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <sched.h>
 #include <fcntl.h>
-#include <linux/sched.h>
 #include <ucontext.h>
 
-#define PAGE 4096
-#define STACK_SIZE (PAGE * 5)
-#define MAX_THREADS 8
-
-typedef struct _uthread_manager_t {
-    uthread_struct_t *uthreads[MAX_THREADS];
-    int uthread_count;
-    int uthread_cur;
-} uthread_manager_t;
+#include "uthread.h"
 
 uthread_manager_t uthread_manager;
 
-typedef struct _uthread_struct_t {
-    int              uthread_id;
-    void             (*thread_func)(void*);
-    void             *arg;
-    void             *retval;
-
-    volatile int     finished;
-    ucontext_t       uctx;
-} uthread_struct_t;
-
-typedef uthread_struct_t *uthread_t;
+void init_thread(uthread_t *main_thread) {
+    uthread_manager.uthreads[0] = main_thread;
+    uthread_manager.uthread_count = 1;
+    uthread_manager.uthread_cur = 0;
+}
 
 int uthread_startup(void *arg) {
     uthread_struct_t *uthread = (uthread_t)arg;
-    void *retval;
+    void *retval = NULL;
 
     printf("uthread_startup: starting a thread func for the thread %d\n", uthread->uthread_id);
     uthread->thread_func(uthread->arg);
@@ -141,13 +124,8 @@ int uthread_create(uthread_t *uthread, void (*thread_func), void *arg) {
 }
 
 int thread_is_finished(uthread_t utid) {
-    if (utid->finished == 1) {
+    if (utid->finished) {
         return 1;
     }
     return 0;
-}
-
-void init_thread(uthread_t thread) {
-    uthread_manager.uthreads[uthread_manager.uthread_count] = thread;
-    uthread_manager.uthread_count++;
 }

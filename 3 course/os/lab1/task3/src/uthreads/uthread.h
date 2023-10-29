@@ -3,6 +3,8 @@
 
 #include <ucontext.h>
 
+#define PAGE 4096
+#define STACK_SIZE (PAGE * 5)
 #define MAX_THREADS 10
 
 typedef struct _uthread_struct_t {
@@ -23,11 +25,10 @@ typedef struct _uthread_manager_t {
     int uthread_cur;
 } uthread_manager_t;
 
-extern uthread_manager_t uthread_manager; // Declare the uthread_manager as external
 
-int uthread_create(uthread_t *uthread, void (*thread_func)(void *), void *arg);
-void uthread_sheduler(void);
+int uthread_create(uthread_t *uthread, void (*thread_func), void *arg);
+void uthread_sheduler();
 int thread_is_finished(uthread_t utid);
-void init_thread(uthread_t thread);
+void init_thread();
 
 #endif

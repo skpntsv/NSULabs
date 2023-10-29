@@ -3,6 +3,8 @@
 
 #include "uthreads/uthread.h"
 
+#define THREADS 4
+
 void thread1(void *arg) {
     char *str = (char *)arg;
 
@@ -38,46 +40,37 @@ void thread3(void *arg) {
 
 int main() {
     int err;
-    uthread_t mytid1;
-    uthread_t mytid2;
-    uthread_t mytid3;
-
-    uthread_t main_tid;
-
-    uthread_manager.uthread_count = 0;  // Initialize the thread count
-    uthread_manager.uthread_cur = 0;    // Initialize the current thread index
-
-    init_thread(main_tid);
+    uthread_t mythreads[THREADS];
+    uthread_t main_thread;
+    init_thread(&main_thread);
+    mythreads[0] = main_thread;
 
     printf("main [%d]\n", getpid());
 
-    err = uthread_create(&mytid1, thread1, "hello from main1");
+    err = uthread_create(&mythreads[1], thread1, "hello from main1");
     if (err == -1) {
         fprintf(stderr, "uthread_create() failed\n");
     }
-    err = uthread_create(&mytid2, thread2, "hello from main2");
+    err = uthread_create(&mythreads[2], thread2, "hello from main2");
     if (err == -1) {
         fprintf(stderr, "uthread_create() failed\n");
     }
-    err = uthread_create(&mytid3, thread3, "hello from main3");
+    err = uthread_create(&mythreads[3], thread3, "hello from main3");
     if (err == -1) {
         fprintf(stderr, "uthread_create() failed\n");
     }
 
-    while(1) {
-        uthread_sheduler();
+    while (1) {
         int count = 0;
-        for (int i = 0; i < 4; i++) {
-            if (thread_is_finished(uthread_manager.uthreads[i])) {
+        for (int i = 1; i < THREADS; i++) {
+            if (thread_is_finished(mythreads[i])) {
                 count++;
             }
-            else {
-                break;
-            }
         }
-        if (count == 4 - 1) {
+        if (count == THREADS - 1) {
             break;
         }
+        uthread_sheduler();
     }
 
     return 0;
