@@ -1,0 +1,96 @@
+import lingo/pegcode/driver;
+import string;
+
+ArExpr ::= ArSum, ArMult, ArInt;
+
+ArSum(lhs : ArExpr, rhs : ArExpr);
+ArMult(lhs : ArExpr, rhs : ArExpr);
+ArInt(val : int);
+
+ar2s(e: ArExpr) -> string {
+    switch (e) {
+        ArSum(lhs, rhs): "(" + ar2s(lhs) + "+" + ar2s(rhs) + ")";
+        ArMult(lhs, rhs): "(" + ar2s(lhs) + "*" + ar2s(rhs) + ")";
+        ArInt(val): i2s(val);
+    }
+}
+
+ar2i(e: ArExpr) -> int {
+    switch (e) {
+        ArSum(lhs, rhs): ar2i(lhs) + ar2i(rhs);
+        ArMult(lhs, rhs): ar2i(lhs) * ar2i(rhs);
+        ArInt(val): val;
+    }
+}
+
+s2ar(str : string) -> ArExpr {
+    e_gr = "#include ../lingo/arith.lingo";
+    parsic(
+        compilePegGrammar("#include ../lingo/arith.lingo"),
+        str,
+        defaultPegActions
+    );
+}
+
+myRPN ::= sumRPN, multRPN, valRPN;
+    
+sumRPN : ();
+multRPN : (); 
+valRPN : (val : int);
+
+expr2rpn(ex: ArExpr) -> [myRPN] {
+    switch (ex) {
+		ArMult(a, b) : concat(concat(expr2rpn(a), expr2rpn(b)), [multRPN()]);
+		ArSum(a, b) : concat(concat(expr2rpn(a), expr2rpn(b)), [sumRPN()]);
+        ArInt(a)    : [valRPN(a)];
+	}
+}
+
+rpn2s(ex : [myRPN]) -> string {
+    fold(ex, "", \acc, r -> {
+        switch(r) {
+            sumRPN() : acc + "+ ";
+            multRPN() : acc + "* ";
+            valRPN(a) : acc + i2s(a) + " ";
+        }
+    });
+}
+
+calculateRPN(rpn : [myRPN]) -> int {
+    lst = fold(rpn, makeList(), \acc, f -> {
+        switch(f) {
+            multRPN() : 
+            {
+                l = headList(acc, 0);
+                acc2 = tailList(acc);
+                r = headList(acc2, 0);
+                acc3 = tailList(acc2);
+                Cons(l * r, acc3);
+            }
+            sumRPN() : 
+            {
+                l = headList(acc, 0);
+                acc2 = tailList(acc);
+                r = headList(acc2, 0);
+                acc3 = tailList(acc2);
+                Cons(l + r, acc3);
+            }
+            valRPN(a) : 
+            {
+                Cons(a, acc);
+            }
+        }
+    });
+    
+    headList(lst, 0);
+}
+
+main() {
+    str = "((1 * 2) + (5+6))";
+    println("str: " + str);
+
+    exp = s2ar(str);
+    rpnFormat = expr2rpn(exp);
+    println("RPN: " + rpn2s(rpnFormat));
+    println("result: " + i2s(calculateRPN(rpnFormat)));
+}
