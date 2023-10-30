@@ -73,8 +73,8 @@ int mythread_create(mythread_t *mytid, void *(start_routine) (void *), void *arg
 
     child_stack = (void *)mythread;
 
-    flags = CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID;
-    child_pid = clone3man(mythread_startup, child_stack, flags, (void*)mythread);
+    flags = CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD;
+    child_pid = clone(mythread_startup, child_stack, flags, (void*)mythread);
     if (child_pid == -1) {
         perror("clone");
         return -1;
