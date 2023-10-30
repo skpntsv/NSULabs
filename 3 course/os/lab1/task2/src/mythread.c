@@ -51,40 +51,12 @@ int mythread_startup(void *arg) {
     return 0;
 }
 
-void *create_stack(off_t size, int mythread_id) {
-    int stack_fd;
+void * create_stack(off_t size) {
     void* stack;
-    char stack_file[128];
 
-    snprintf(stack_file , sizeof(stack_file), ".stack.%d", mythread_id);
-
-    stack_fd = open(stack_file, O_RDWR | O_CREAT, 0660);
-    if (stack_fd == -1) {
-        perror("open stack_fd");
-        return NULL;
-    }
-    if (ftruncate(stack_fd, 0) == -1) {
-        perror("ftruncate");
-        return NULL;
-    }
-    if (ftruncate(stack_fd, size) == -1) {
-        perror("ftruncate");
-        return NULL;
-    }
-
-    stack = mmap(NULL, size, PROT_NONE, MAP_SHARED, stack_fd, 0);
+    stack = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (stack == MAP_FAILED) {
-       perror("mmap");
-        return NULL;
-    }
-
-    if (close(stack_fd) == -1) {
-        perror("close stack_fd");
-        return NULL;
-    }
-
-    if (mprotect(stack, STACK_SIZE, PROT_READ | PROT_WRITE) == -1) {
-        perror("mprotect");
+        perror("mmap");
         return NULL;
     }
     
@@ -92,17 +64,12 @@ void *create_stack(off_t size, int mythread_id) {
 }
 
 int mythread_create(mythread_t *mytid, void *(start_routine) (void *), void *arg) {
-    static int mythread_id = 0;
     mythread_struct_t *mythread;
     int child_pid;
     void *child_stack;
     int flags;
 
-    mythread_id++; 
-
-    printf("mythread_create: creating thread %d\n", mythread_id);
-
-    child_stack = create_stack(STACK_SIZE, mythread_id);
+    child_stack = create_stack(STACK_SIZE);
     if (child_stack == NULL) {
         fprintf(stderr, "create_stack() failed\n");
         return -1;
@@ -110,14 +77,16 @@ int mythread_create(mythread_t *mytid, void *(start_routine) (void *), void *arg
     
 
     mythread = (mythread_struct_t*)(child_stack + STACK_SIZE - sizeof(mythread_struct_t));
-    mythread->id = mythread_id;
+    mythread->id = &(mythread);
     mythread->start_routine = start_routine;
     mythread->arg = arg;
     mythread->retval = NULL;
     mythread->joined = 0;
     mythread->finished = 0;
     mythread->stack = child_stack;
-
+    
+    printf("mythread_create: creating thread %d\n", &mythread);
+    
     child_stack = (void *)mythread;
 
     printf("child stack %p; mythread_struct %p; \n", child_stack, mythread);
