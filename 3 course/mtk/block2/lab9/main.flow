@@ -1,0 +1,29 @@
+import calculator;
+
+export {
+    ratPol : (numerator : ArExpr, denominator : ArExpr);
+
+    sumRatPol(lhs : Maybe<ratPol>, rhs : Maybe<ratPol>) -> Maybe<rayPol>;
+    subRatPol(lhs : Maybe<ratPol>, rhs : Maybe<ratPol>) -> Maybe<rayPol>;
+}
+
+sumRatPol(lhs : Maybe<ratPol>, rhs : Maybe<ratPol>) -> Maybe<rayPol> {
+    if (isSome(lhs) && isSome(rhs)) {
+        val1 = either(lhs, ratPol(ArInt(0), ArInt(0)));
+        val2 = either(rhs, ratPol(ArInt(0), ArInt(0)));
+
+        
+    }
+}
+
+main() {
+    //str = "- ((5 * 3) / (4 * 2)) / 3) * a)";
+    str = "(1/(x-(2/4)))";
+    vars = setTreeValues(makeTree(), [Pair("x", ratNum(1, 2))]);
+    ex = parser(str);
+    println(ex);
+
+    println("parsed AST: " + ar2s(ex));
+
+    println("result: " + ratNum2s(calculate(ex, vars)));
+}
