@@ -1,4 +1,4 @@
-package ru.nsu.skopintsev.model;
+package ru.nsu.skopintsev.api.responses;
 
 import lombok.Data;
 
