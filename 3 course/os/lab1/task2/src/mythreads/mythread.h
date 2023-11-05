@@ -1,13 +1,17 @@
 #ifndef MYTHREAD_H
 #define MYTHREAD_H
 
+#include <sys/types.h>
+
 #define PAGE 4096
 #define STACK_SIZE (PAGE * 5)
 
 typedef void *(*start_routine_t)(void*);
 
+typedef int pid_t;
+
 typedef struct _mythread_t {
-    int              id;
+    pid_t            id;
     start_routine_t  start_routine;
     void             *arg;
     void             *retval;

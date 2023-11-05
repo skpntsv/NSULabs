@@ -6,9 +6,9 @@
 void *mythread1(void *arg) {
     char *str = (char *)arg;
 
-	for (int i = 0; i < 1; i++) {
+	for (int i = 0; i < 5; i++) {
         printf("Mythread1[%d]: %s\n", i, str);
-        sleep(1);
+        //sleep(1);
     }
 
     return "bay from 1";
@@ -17,9 +17,9 @@ void *mythread1(void *arg) {
 void *mythread2(void *arg) {
     char *str = (char *)arg;
 
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 5; i++) {
         printf("Mythread2[%d]: %s\n", i, str);
-        sleep(1);
+        //sleep(2);
     }
 
     return "bay from 2";
@@ -28,9 +28,10 @@ void *mythread2(void *arg) {
 void *mythread3(void *arg) {
     char *str = (char *)arg;
 
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 5; i++) {
         printf("Mythread3[%d]: %s\n", i, str);
-        sleep(1);
+        //write(1, "10\n", 3);
+        //sleep(3);
     }
 
     return "bay from 3";
