@@ -10,6 +10,5 @@ public class Weather {
     private String windDirection;
     private Long pressure;
     private Long humidity;
-    private String iconUrl;
     private String desc;
 }
