@@ -10,7 +10,7 @@
 
 #include "uthread.h"
 
-uthread_manager_t uthread_manager;
+uthread_manager_t uthread_manager;  // перенести структуру в main и передавать через аргументы
 
 int uthread_startup(void *arg) {
     uthread_struct_t *uthread = (uthread_t)arg;
@@ -25,35 +25,12 @@ int uthread_startup(void *arg) {
     return 0;
 }
 
-void *create_stack(off_t size, int uthread_id) {
-    int stack_fd;
+void *create_stack(off_t size) {
     void* stack;
-    char stack_file[128];
 
-    snprintf(stack_file , sizeof(stack_file), ".stack.%d", uthread_id);
-
-    stack_fd = open(stack_file, O_RDWR | O_CREAT, 0660);
-    if (stack_fd == -1) {
-        perror("open stack_fd");
-        return NULL;
-    }
-    if (ftruncate(stack_fd, 0) == -1) {
-        perror("ftruncate");
-        return NULL;
-    }
-    if (ftruncate(stack_fd, size) == -1) {
-        perror("ftruncate");
-        return NULL;
-    }
-
-    stack = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_PRIVATE, stack_fd, 0);
+    stack = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (stack == MAP_FAILED) {
-       perror("mmap");
-        return NULL;
-    }
-
-    if (close(stack_fd) == -1) {
-        perror("close stack_fd");
+        perror("mmap");
         return NULL;
     }
     
@@ -85,7 +62,7 @@ int uthread_create(uthread_t *uthread, void (*thread_func), void *arg) {
 
     printf("uthread_create: creating thread %d\n", uthread_id);
 
-    stack = create_stack(STACK_SIZE, uthread_id);
+    stack = create_stack(STACK_SIZE);
     if (stack == NULL) {
         fprintf(stderr, "create_stack() failed\n");
         return -1;
