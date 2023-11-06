@@ -9,7 +9,7 @@
 
 typedef struct _uthread_struct_t {
     int              uthread_id;
-    void             (*thread_func)(void*);
+    void             (*thread_func)(void*, void*);
     void             *arg;
     void             *retval;
 
@@ -26,9 +26,9 @@ typedef struct _uthread_manager_t {
 } uthread_manager_t;
 
 
-int uthread_create(uthread_t *uthread, void (*thread_func), void *arg);
-void uthread_sheduler();
+int uthread_create(uthread_t *uthread, uthread_manager_t *uthread_manager, void (*thread_func), void *arg);
+void uthread_sheduler(uthread_manager_t *uthread_manager);
 int thread_is_finished(uthread_t utid);
-void init_thread();
+void init_thread(uthread_t *main_thread, uthread_manager_t *uthread_manager);
 
 #endif

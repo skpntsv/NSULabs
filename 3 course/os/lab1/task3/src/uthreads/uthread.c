@@ -10,14 +10,13 @@
 
 #include "uthread.h"
 
-uthread_manager_t uthread_manager;  // перенести структуру в main и передавать через аргументы
-
-int uthread_startup(void *arg) {
+int uthread_startup(void *arg, void *uthread_manager) {
     uthread_struct_t *uthread = (uthread_t)arg;
+    uthread_manager_t *manager = (uthread_manager_t*)uthread_manager;
     void *retval = NULL;
 
     printf("uthread_startup: starting a thread func for the thread %d\n", uthread->uthread_id);
-    uthread->thread_func(uthread->arg);
+    uthread->thread_func(uthread->arg, manager);
     
     uthread->retval = retval;
     uthread->finished = 1;
@@ -37,13 +36,13 @@ void *create_stack(off_t size) {
     return stack;
 }
 
-void uthread_sheduler() {
+void uthread_sheduler(uthread_manager_t *uthread_manager) {
     int err;
     ucontext_t *cur_ctx, *next_ctx;
 
-    cur_ctx = &(uthread_manager.uthreads[uthread_manager.uthread_cur]->uctx);
-    uthread_manager.uthread_cur = (uthread_manager.uthread_cur + 1) % uthread_manager.uthread_count;
-    next_ctx = &(uthread_manager.uthreads[uthread_manager.uthread_cur]->uctx);
+    cur_ctx = &(uthread_manager->uthreads[uthread_manager->uthread_cur]->uctx);
+    uthread_manager->uthread_cur = (uthread_manager->uthread_cur + 1) % uthread_manager->uthread_count;
+    next_ctx = &(uthread_manager->uthreads[uthread_manager->uthread_cur]->uctx);
 
     err = swapcontext(cur_ctx, next_ctx);
     if (err == -1) {
@@ -52,7 +51,7 @@ void uthread_sheduler() {
     }
 }
 
-int uthread_create(uthread_t *uthread, void (*thread_func), void *arg) {
+int uthread_create(uthread_t *uthread, uthread_manager_t *uthread_manager, void (*thread_func), void *arg) {
     static int uthread_id = 0;
     uthread_t new_uthread;
     void *stack;
@@ -77,17 +76,17 @@ int uthread_create(uthread_t *uthread, void (*thread_func), void *arg) {
     
     new_uthread->uctx.uc_stack.ss_sp = stack;
     new_uthread->uctx.uc_stack.ss_size = STACK_SIZE - sizeof(uthread_t);
-    new_uthread->uctx.uc_link = &uthread_manager.uthreads[0]->uctx;
+    new_uthread->uctx.uc_link = &uthread_manager->uthreads[0]->uctx;
 
-    makecontext(&new_uthread->uctx, (void (*)(void)) uthread_startup, 1, new_uthread);
+    makecontext(&new_uthread->uctx, (void (*)(void)) uthread_startup, 2, new_uthread, uthread_manager);
     
     new_uthread->uthread_id = uthread_id;
     new_uthread->thread_func = thread_func;
     new_uthread->arg = arg;
     new_uthread->finished = 0;
 
-    uthread_manager.uthreads[uthread_manager.uthread_count] = new_uthread;
-    uthread_manager.uthread_count++;
+    uthread_manager->uthreads[uthread_manager->uthread_count] = new_uthread;
+    uthread_manager->uthread_count++;
 
     *uthread = new_uthread;
 
@@ -101,8 +100,8 @@ int thread_is_finished(uthread_t utid) {
     return 0;
 }
 
-void init_thread(uthread_t *main_thread) {
-    uthread_manager.uthreads[0] = main_thread;
-    uthread_manager.uthread_count = 1;
-    uthread_manager.uthread_cur = 0;
+void init_thread(uthread_t *main_thread, uthread_manager_t *uthread_manager) {
+    uthread_manager->uthreads[0] = main_thread;
+    uthread_manager->uthread_count = 1;
+    uthread_manager->uthread_cur = 0;
 }
