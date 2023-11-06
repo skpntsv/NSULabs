@@ -75,7 +75,7 @@ divRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum> { // a/b / 
         newDenominator = val1.denominator / nodBD * val2.numerator / nodAC;
 
         if (newDenominator == 0) {
-            println("ERROR (Division by zero)");
+            //println("ERROR (Division by zero)");
             None();
         } else {
             nod = iabs(gcd(newNumerator, newDenominator));
@@ -127,16 +127,17 @@ ar2s(e: ArExpr) -> string {
 parser(str : string) -> ArExpr {
     e_gr = "#include ../lingo/full_arith.lingo";
     parsic(
-        compilePegGrammar("#include ../lingo/full_arith.lingo"),
+        compilePegGrammar(e_gr),
         str,
         defaultPegActions
     );
 }
 
 main() {
-    //str = "- ((5 * 3) / (4 * 2)) / 3) * a)";
-    str = "(1/(x-(2/4)))";
-    vars = setTreeValues(makeTree(), [Pair("x", ratNum(1, 2))]);
+    //str = "(- ((13 * 9) / (5 * 2)) * x)"; // -5,85 == -117/20
+    str = "((1/2000000000)+(1/2000000000))"; // деление на ноль
+
+    vars = setTreeValues(makeTree(), [Pair("x", ratNum(2, 4))]);
     ex = parser(str);
     println(ex);
 
