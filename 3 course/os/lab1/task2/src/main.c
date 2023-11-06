@@ -5,34 +5,45 @@
 
 void *mythread1(void *arg) {
     char *str = (char *)arg;
+    int k1 = 0;
 
 	for (int i = 0; i < 5; i++) {
-        printf("Mythread1[%d]: %s\n", i, str);
-        //sleep(1);
+        fprintf(stdout, "Mythread1[%d]: %s\n", i, str);
+        // sleep(1);
+
+        k1++;
     }
+    printf("k1 = %d\n", k1);
 
     return "bay from 1";
 }
 
 void *mythread2(void *arg) {
     char *str = (char *)arg;
+    int k2 = 0;
 
-	for (int i = 0; i < 5; i++) {
-        printf("Mythread2[%d]: %s\n", i, str);
-        //sleep(2);
+	for (int i = 0; i < 10; i++) {
+        fprintf(stdout, "Mythread2[%d]: %s\n", i, str);
+        // sleep(1);
+
+        k2++;
     }
+    printf("k2 = %d\n", k2);
 
     return "bay from 2";
 }
 
 void *mythread3(void *arg) {
     char *str = (char *)arg;
+    int k3 = 0;
+	for (int i = 0; i < 15; i++) {
+        fprintf(stdout, "Mythread3[%d]: %s\n", i, str);
+        // //write(1, "10\n", 3);
+        // sleep(1);
 
-	for (int i = 0; i < 5; i++) {
-        printf("Mythread3[%d]: %s\n", i, str);
-        //write(1, "10\n", 3);
-        //sleep(3);
+        k3++;
     }
+    printf("k3 = %d\n", k3);
 
     return "bay from 3";
 }

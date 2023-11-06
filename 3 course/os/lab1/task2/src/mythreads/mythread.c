@@ -29,11 +29,9 @@ int mythread_startup(void *arg) {
     }
     //printf("mythread_startup: the thread func finished for the thread %d\n", mythread->id);
 
-    if (munmap(mythread->stack, STACK_SIZE - 1) == -1) {
+    if (munmap(mythread->stack, STACK_SIZE - PAGE) == -1) {
         perror("munmap");
     }
-
-    //free(mythread);
 
     return 0;
 }
@@ -52,23 +50,17 @@ void *create_stack(off_t size) {
 
 int mythread_create(mythread_t *mytid, void *(start_routine) (void *), void *arg) {
     mythread_struct_t *mythread;
-    int child_pid;
+    //int child_pid;
     void *child_stack;
     int flags;
-
     child_stack = create_stack(STACK_SIZE);
     if (child_stack == NULL) {
         fprintf(stderr, "create_stack() failed\n");
         return -1;
     }
     
-    mythread = (mythread_struct_t*)malloc(sizeof(mythread_struct_t));
-    if (mythread == NULL) {
-        fprintf(stderr, "malloc() failed\n");
-        return -1;
-    }
+    mythread = (mythread_struct_t*)(child_stack + STACK_SIZE - sizeof(mythread_struct_t));
 
-    mythread->id = (pid_t)mythread;
     mythread->start_routine = start_routine;
     mythread->arg = arg;
     mythread->retval = NULL;
@@ -79,11 +71,11 @@ int mythread_create(mythread_t *mytid, void *(start_routine) (void *), void *arg
     //printf("mythread_create: creating thread %d\n", mythread->id);
     //printf("child stack %p; mythread_struct %p; \n", child_stack, mythread);
 
-    //child_stack = (void *)mythread;
+    child_stack = (void *)mythread;
 
     flags = CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD;
-    child_pid = clone(mythread_startup, child_stack + STACK_SIZE, flags, (void*)mythread);
-    if (child_pid == -1) {
+    mythread->id = clone(mythread_startup, child_stack, flags, (void*)mythread);
+    if (mythread->id == -1) {
         perror("clone");
         return -1;
     }
