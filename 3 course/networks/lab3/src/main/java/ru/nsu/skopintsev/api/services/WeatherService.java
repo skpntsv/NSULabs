@@ -3,7 +3,6 @@ package ru.nsu.skopintsev.api.services;
 import com.google.gson.Gson;
 import okhttp3.Request;
 import okhttp3.ResponseBody;
-import ru.nsu.skopintsev.api.responses.LocationResponse;
 import ru.nsu.skopintsev.api.responses.WeatherResponse;
 
 import java.io.IOException;
@@ -13,7 +12,7 @@ public class WeatherService {
 
     public Request getRequest(double lat, double lng) {
 
-        String apiUrl = API_URL + "?lat=" + lat + "&lon=" + lng +"&key=" + apiKey;
+        String apiUrl = API_URL + "?units=metric" + "&lat=" + lat + "&lon=" + lng +"&appid=" + apiKey;
 
         Request request = new Request.Builder()
                 .url(apiUrl)
