@@ -9,4 +9,12 @@ public class Location {
 
     private String name;
     private String address;
+
+    @Override
+    public String toString() {
+        return name + "\n\t" +
+                address + " [" +
+                lat + "; " +
+                lng + "]";
+    }
 }
