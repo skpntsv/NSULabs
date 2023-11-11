@@ -1,10 +1,11 @@
 package ru.nsu.skopintsev;
 
-import ru.nsu.skopintsev.api.responses.LocationResponse;
 import ru.nsu.skopintsev.api.responses.PlacesResponse;
-import ru.nsu.skopintsev.api.responses.WeatherResponse;
-import ru.nsu.skopintsev.controller.*;
-import ru.nsu.skopintsev.model.*;
+import ru.nsu.skopintsev.controller.LocationController;
+import ru.nsu.skopintsev.controller.PlacesController;
+import ru.nsu.skopintsev.controller.WeatherController;
+import ru.nsu.skopintsev.model.Location;
+import ru.nsu.skopintsev.model.Weather;
 
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
@@ -32,11 +33,11 @@ public class Main {
                 Location selectedLocation = locations[selectedLocationIndex];
 
                 WeatherController weatherController = new WeatherController();
-                CompletableFuture<WeatherResponse> weatherFuture = weatherController.
+                CompletableFuture<Weather> weatherFuture = weatherController.
                         getWeatherByCoords(selectedLocation.getLat(), selectedLocation.getLng());
 
                 weatherFuture.thenAccept(weather -> {
-                    System.out.println(weather.toString());
+                    System.out.println("Информация о погоде:\n" + weather.toString());
 
                     PlacesController placesController = new PlacesController();
                     CompletableFuture<PlacesResponse> placesFuture = placesController.getInterestingPlaces(selectedLocation.getLat(), selectedLocation.getLng());
