@@ -14,12 +14,12 @@ public class Weather {
 
     @Override
     public String toString() {
-        return "Temperature: " + temperature + " °C\n" +
-                "Feels Like Temperature: " + feelsLikeTemperature + " °C\n" +
-                "Wind Speed: " + windSpeed + " m/s\n" +
-                "Wind Direction: " + windDirection + "°\n" +
-                "Pressure: " + pressure + " hPa\n" +
-                "Humidity: " + humidity + "%\n" +
-                "Description: " + desc + "\n";
+        return "\tТемпература: " + temperature + " °C\n\t" +
+                "Ощущается как: " + feelsLikeTemperature + " °C\n\t" +
+                "Скорость ветра: " + windSpeed + " м/с\n\t" +
+                "Направление ветра: " + windDirection + "°\n\t" +
+                "Давление: " + pressure + " гПа\n\t" +
+                "Влажность: " + humidity + "%\n\t" +
+                "Описание: " + desc;
     }
 }
