@@ -3,9 +3,9 @@ package ru.nsu.skopintsev.model;
 import lombok.Data;
 
 @Data
-public class Place {
-    private Double lat;
-    private Double lng;
+public class Places {
+    private double lat;
+    private double lng;
     private String name;
     private String address;
     private String imageUrl;
