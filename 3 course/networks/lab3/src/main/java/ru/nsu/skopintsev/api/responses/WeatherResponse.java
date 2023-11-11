@@ -25,14 +25,12 @@ public class WeatherResponse {
 
     @Data
     public static class Coord {
-
         private Double lat;
         private Double lon;
     }
 
     @Data
     public static class Weather {
-
         private Long id;
         private String main;
         private String description;
@@ -41,7 +39,6 @@ public class WeatherResponse {
 
     @Data
     public static class Main {
-
         private Double temp;
         private Double feels_like;
         private Double temp_min;
@@ -54,7 +51,6 @@ public class WeatherResponse {
 
     @Data
     public static class Wind {
-
         private Double speed;
         private Long deg;
         private Double gust;
@@ -62,16 +58,13 @@ public class WeatherResponse {
 
     @Data
     public static class Clouds {
-
         private Long all;
     }
 
     @Data
     public static class Rain {
-
         @SerializedName("1h")
         private Double _1h;
-
 
         @SerializedName("3h")
         private Double _3h;
@@ -79,10 +72,8 @@ public class WeatherResponse {
 
     @Data
     public static class Snow {
-
         @SerializedName("1h")
         private Double _1h;
-
 
         @SerializedName("3h")
         private Double _3h;
@@ -90,7 +81,6 @@ public class WeatherResponse {
 
     @Data
     public static class Sys {
-
         private Long type;
         private Long id;
         private String country;
