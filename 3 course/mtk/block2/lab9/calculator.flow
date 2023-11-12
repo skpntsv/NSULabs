@@ -1,0 +1,314 @@
+import lingo/pegcode/driver;
+import string;
+import math/math;
+
+export {
+    ArExpr ::= ArSum, ArMult, ArSub, ArDiv, ArNeg, ArVar, ArRatNum;
+
+    ArSum(lhs : ArExpr, rhs : ArExpr);
+    ArMult(lhs : ArExpr, rhs : ArExpr);
+    ArSub(lhs : ArExpr, rhs : ArExpr);
+    ArDiv(lhs : ArExpr, rhs : ArExpr);
+
+    ArNeg(val : ArExpr);
+    ArVar(val : string);
+    ArRatNum(numerator : int, denominator : int);
+
+    ratNum : (numerator : int, denominator : int);
+
+    sumRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum>;
+    subRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum>;
+    multRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum>;
+    divRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum>;
+    ratNum2s(rat : Maybe<ratNum>) -> string;
+    calculate(e: ArExpr, vars : Tree<string, ratNum>) -> Maybe<ratNum>;
+    ar2s(e: ArExpr) -> string;
+    parser(str : string) -> ArExpr;
+
+    getRatNum(e : ArExpr) -> ratNum;
+
+    diff(e : ArExpr, var : ArVar) -> ArExpr;
+    make2simple(e : ArExpr) -> ArExpr;
+}
+
+sumRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum> {
+    if (isSome(lhs) && isSome(rhs)) {
+        val1 = either(lhs, ratNum(0, 0));
+        val2 = either(rhs, ratNum(0, 0));
+
+        nok = lcm(val1.denominator, val2.denominator);
+        newNumerator = nok / val1.denominator * val1.numerator + nok / val2.denominator * val2.numerator;
+        newDenominator = nok;
+
+        nod = iabs(gcd(newNumerator, newDenominator));
+        Some(ratNum(newNumerator / nod, newDenominator / nod));
+    } else {
+        None();
+    }
+}
+
+subRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum> {
+    if (isSome(lhs) && isSome(rhs)) {
+        val1 = either(lhs, ratNum(0, 0));
+        val2 = either(rhs, ratNum(0, 0));
+
+        nok = lcm(val1.denominator, val2.denominator);
+        newNumerator = nok / val1.denominator * val1.numerator - nok / val2.denominator * val2.numerator;
+        newDenominator = nok;
+
+        nod = iabs(gcd(newNumerator, newDenominator));
+        Some(ratNum(newNumerator / nod, newDenominator / nod));
+    } else {
+        None();
+    }
+}
+
+multRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum> { // a/b * c/d
+    if (isSome(lhs) && isSome(rhs)) {
+        val1 = either(lhs, ratNum(0, 0));
+        val2 = either(rhs, ratNum(0, 0));
+
+        nodAD = iabs(gcd(val1.numerator, val2.denominator));
+        nodBC = iabs(gcd(val2.numerator, val1.denominator));
+        newNumerator = val1.numerator / nodAD * val2.numerator / nodBC;
+        newDenominator = val1.denominator / nodBC * val2.denominator / nodAD;
+
+        nod = iabs(gcd(newNumerator, newDenominator));
+        Some(ratNum(newNumerator / nod, newDenominator / nod));
+    } else {
+        None();
+    }
+}
+
+divRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum> { // a/b / c/d
+    if (isSome(lhs) && isSome(rhs)) {
+        val1 = either(lhs, ratNum(0, 0));
+        val2 = either(rhs, ratNum(0, 0));
+
+        nodAC = iabs(gcd(val1.numerator, val2.numerator));
+        nodBD = iabs(gcd(val1.denominator, val2.denominator));
+        newNumerator = val1.numerator / nodAC * val2.denominator / nodBD;
+        newDenominator = val1.denominator / nodBD * val2.numerator / nodAC;
+
+        if (newDenominator == 0) {
+            println("ERROR (Division by zero)");
+            None();
+        } else {
+            nod = iabs(gcd(newNumerator, newDenominator));
+            Some(ratNum(newNumerator / nod, newDenominator / nod));
+        }
+    } else {
+        None();
+    }
+}
+
+ratNum2s(rat : Maybe<ratNum>) -> string {
+    if (isSome(rat)) {
+        newRat = either(rat, ratNum(0, 0));
+        if (newRat.denominator == 0) 
+            "ERROR (Division by zero)"
+        else if (newRat.denominator == 1)
+            i2s(newRat.numerator)
+        else
+            i2s(newRat.numerator) + "/" + i2s(newRat.denominator);
+    } else {
+        "ERROR (What's wrong??????????)";
+    }
+}
+
+calculate(e: ArExpr, vars : Tree<string, ratNum>) -> Maybe<ratNum> {
+    switch (e) {
+        ArSum(lhs, rhs): sumRatNum(calculate(lhs, vars), calculate(rhs, vars));
+        ArMult(lhs, rhs): multRatNum(calculate(lhs, vars), calculate(rhs, vars));
+        ArSub(lhs, rhs): subRatNum(calculate(lhs, vars), calculate(rhs, vars));
+        ArDiv(lhs, rhs): divRatNum(calculate(lhs, vars), calculate(rhs, vars));
+        ArNeg(val): multRatNum(Some(ratNum(-1,1)), calculate(val, vars));
+        ArVar(val): lookupTree(vars, val);
+        ArRatNum(n, d): Some(ratNum(n, d));
+    }
+}
+
+ar2s(e: ArExpr) -> string {
+    switch (e) {
+        ArSum(lhs, rhs): "(" + ar2s(lhs) + "+" + ar2s(rhs) + ")";
+        ArMult(lhs, rhs): "(" + ar2s(lhs) + "*" + ar2s(rhs) + ")";
+        ArSub(lhs, rhs): "(" + ar2s(lhs) + "-" + ar2s(rhs) + ")";
+        ArDiv(lhs, rhs): "(" + ar2s(lhs) + "/" + ar2s(rhs) + ")";
+        ArNeg(val): "(-" + ar2s(val) + ")";
+        ArVar(val): val;
+        ArRatNum(n,d) :{
+            if(d == 1){
+                i2s(n);
+            }
+            else if(n == 0 && d != 0){
+                i2s(0);
+            }
+            else if(d == 0){
+                "Error! Division by zero!";
+            }
+            else{
+                i2s(n) + "/" + i2s(d);
+            }
+        }
+    }
+}
+
+parser(str : string) -> ArExpr {
+    e_gr = "#include ../lingo/full_arith.lingo";
+    parsic(
+        compilePegGrammar("#include ../lingo/ratNum_arith.lingo"),
+        str,
+        defaultPegActions
+    );
+}
+
+diff(e : ArExpr, var : ArVar) -> ArExpr {
+    switch(e) {
+        ArMult(lhs, rhs) : ArSum(ArMult(diff(lhs, var), rhs), ArMult(lhs, diff(rhs, var)));
+        ArSum(lhs, rhs) : ArSum(diff(lhs, var), diff(rhs, var));
+        ArDiv(lhs, rhs) : ArDiv(ArSub(ArMult(diff(lhs, var), rhs), ArMult(lhs, diff(rhs, var))), ArMult(rhs, rhs));
+        ArSub(lhs, rhs) : ArSub(diff(lhs, var), diff(rhs, var));
+        ArNeg(val) : ArNeg(diff(val, var));
+        ArRatNum(n,d) : ArRatNum(0, 1);
+        ArVar(val) : {
+            if (val == var.val)
+                ArRatNum(1, 1)
+            else
+                ArRatNum(0, 1);
+        }
+    }
+}
+
+getRatNum(e : ArExpr) -> ratNum {
+    switch(e) {
+        ArSum(lhs, rhs): ratNum(0, 0);
+        ArSub(lhs, rhs): ratNum(0, 0);
+        ArMult(lhs, rhs): ratNum(0, 0);
+        ArDiv(lhs, rhs): ratNum(0, 0);
+        ArNeg(val): ratNum(0, 0);
+        ArRatNum(n, d): ratNum(n, d);
+        ArVar(val): ratNum(0, 0);
+
+    }
+}
+
+maybe2val(m : Maybe<ratNum>) -> ratNum {
+    switch (m) {
+        Some(v): v;
+        None(): ratNum(0, 0);
+    }
+}
+
+make2simple(e : ArExpr) -> ArExpr {
+    switch(e) {
+        ArVar(val): ArVar(val);
+        ArRatNum(n, d): ArRatNum(n, d);
+        ArSum(lhs, rhs): {
+            l = make2simple(lhs);
+            r = make2simple(rhs);
+
+            if (l == ArRatNum(0, 1)) {
+                r;
+            }
+            else 
+            if (r == ArRatNum(0, 1)) {
+                l;
+            }
+            else {
+                if (l.structname == "ArRatNum" && r.structname == "ArRatNum") {
+                    sum = maybe2val(sumRatNum(Some(getRatNum(l)), Some(getRatNum(r))));
+                    ArRatNum(sum.numerator, sum.denominator);
+                }
+                else {
+                   ArSum(l, r); 
+                }
+            }
+        }
+        ArSub(lhs, rhs): {
+            l = make2simple(lhs);
+            r = make2simple(rhs);
+
+            if(r == ArRatNum(0,1)) {
+                l;
+            }
+            else if(l == ArRatNum(0,1)) {
+                ArNeg(r);
+            }
+            else if(l == r) {
+                ArRatNum(0, 1);
+            }
+            else{
+                if (l.structname == "ArRatNum" && r.structname == "ArRatNum") {
+                    minus = maybe2val(sumRatNum(Some(getRatNum(l)), Some(ratNum(0 - getRatNum(r).numerator, getRatNum(r).denominator))));
+                    ArRatNum(minus.numerator, minus.denominator);
+                }
+                else {
+                   ArSub(l, r); 
+                }
+            }
+        }
+        ArMult(lhs, rhs):{
+            l = make2simple(lhs);
+            r = make2simple(rhs);
+
+            if (r == ArRatNum(-1,1)) {
+                ArNeg(l);
+            }
+            else if (l == ArRatNum(-1,1)) {
+                ArNeg(r);
+            }
+            else if (r == ArRatNum(0,1)) {
+                ArRatNum(0,1);
+            }
+            else if (l == ArRatNum(0,1)) {
+                ArRatNum(0,1);
+            }
+            else if (r == ArRatNum(1,1)) {
+                l;
+            }
+            else if (l == ArRatNum(1,1)) {
+                r;
+            }
+            else {
+                if (l.structname == "ArRatNum" && r.structname == "ArRatNum") {
+                    mult = maybe2val(multRatNum(Some(getRatNum(l)), Some(getRatNum(r))));
+                    ArRatNum(mult.numerator, mult.denominator);
+                }
+                else {
+                    ArMult(l, r);
+                }
+            }
+        }
+        ArDiv(lhs, rhs): {
+            l = make2simple(lhs);
+            r = make2simple(rhs);
+
+            if (r == ArRatNum(1,1)) {
+                l;
+            }
+            else if (r == ArRatNum(0,1)) {
+                ArRatNum(0,0);
+            }
+            else if (l == ArRatNum(0,1) && r != ArRatNum(0,1)) {
+                ArRatNum(0,1);
+            }
+            else {
+                if (l.structname == "ArRatNum" && r.structname == "ArRatNum") {
+                    div = maybe2val(multRatNum(Some(getRatNum(l)), Some(ratNum(getRatNum(r).denominator, getRatNum(r).numerator))));
+                    ArRatNum(div.numerator, div.denominator);
+                }
+                else {
+                    ArDiv(l, r);
+                }
+            }
+        }
+        ArNeg(val): {
+            newVal = make2simple(val);
+            switch(newVal) {
+                ArNeg(v): v;
+                ArRatNum(n, d): ArRatNum(0 - n, d);
+                default: ArNeg(newVal);
+            }
+        }
+    }
+}
