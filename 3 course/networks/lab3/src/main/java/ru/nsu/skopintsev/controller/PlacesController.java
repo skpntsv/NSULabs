@@ -5,13 +5,16 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import org.jetbrains.annotations.NotNull;
 import ru.nsu.skopintsev.api.responses.PlacesResponse;
+import ru.nsu.skopintsev.api.responses.WeatherResponse;
 import ru.nsu.skopintsev.api.services.PlacesService;
+import ru.nsu.skopintsev.model.Weather;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 public class PlacesController {
-    private static final int RADIUS = 100; // in metres
+    private static final int RADIUS = 10000; // in metres
     private final PlacesService placesService;
     private final OkHttpClient httpClient;
 
@@ -20,8 +23,8 @@ public class PlacesController {
         this.httpClient = new OkHttpClient();
     }
 
-    public CompletableFuture<PlacesResponse> getInterestingPlaces(double lat, double lng) {
-        CompletableFuture<PlacesResponse> future = new CompletableFuture<>();
+    public CompletableFuture<String[]> getInterestingPlaces(double lat, double lng) {
+        CompletableFuture<String[]> future = new CompletableFuture<>();
 
         httpClient.newCall(placesService.getRequest(lat, lng, RADIUS)).enqueue(new okhttp3.Callback() {
             @Override
@@ -29,7 +32,8 @@ public class PlacesController {
                 if (response.isSuccessful()) {
                     ResponseBody responseBody = response.body();
                     if (responseBody != null) {
-                        future.complete(placesService.responseBodyToModel(responseBody));
+                        future.complete(mapPlacesArrayToStringArray(placesService.
+                                responseBodyToModel(responseBody)));
                     } else {
                         future.completeExceptionally(new IOException("Empty response body"));
                     }
@@ -45,5 +49,11 @@ public class PlacesController {
         });
 
         return future;
+    }
+
+    private String[] mapPlacesArrayToStringArray(PlacesResponse.Place[] places) {
+        return Arrays.stream(places)
+                .map(PlacesResponse.Place::getXid)
+                .toArray(String[]::new);
     }
 }

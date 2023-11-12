@@ -3,12 +3,16 @@ package ru.nsu.skopintsev.model;
 import lombok.Data;
 
 @Data
-public class Places {
+public class Place {
     private double lat;
     private double lng;
     private String name;
-    private String address;
-    private String imageUrl;
 
     private String description;
+
+    @Override
+    public String toString() {
+        return "\tМесто: " + name +
+                "\n\tDescription: " + description;
+    }
 }
