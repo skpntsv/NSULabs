@@ -1,0 +1,81 @@
+import calculator_pol;
+
+identity(from: ArExpr, to: ArExpr);
+
+makeIdentitiesTree(identities: [identity]) -> Tree<ArExpr, ArExpr> {
+    fold(identities, makeTree(), \acc, ident -> {
+        setTree(acc, ident.from, ident.to)
+        });
+}
+
+makeSimpleByIdentities(expr: ArExpr, identitiesTree : Tree<ArExpr, ArExpr>) -> ArExpr{
+    if (containsKeyTree(identitiesTree, expr)) {
+        identTo = lookupTree(identitiesTree, expr);
+        identTo ?? identTo : expr;
+    }
+    else {
+        expr;
+    }
+}
+
+findIdentities(expr: ArExpr, identitiesTree : Tree<ArExpr, ArExpr>) -> ArExpr{
+    e = makeSimpleByIdentities(expr, identitiesTree);
+        switch (e) {
+            ArSum(lhs, rhs): {
+                l = findIdentities(lhs, identitiesTree);
+                r = findIdentities(rhs, identitiesTree);
+                ArSum(l, r);
+            }
+
+            ArSub(lhs, rhs): {
+                l = findIdentities(lhs, identitiesTree);
+                r = findIdentities(rhs, identitiesTree);
+                ArSub(l, r);
+            }
+
+            ArMult(lhs, rhs): {
+                l = findIdentities(lhs, identitiesTree);
+                r = findIdentities(rhs, identitiesTree);
+                ArMult(l, r);
+            }
+
+            ArDiv(lhs, rhs): {
+                l = findIdentities(lhs, identitiesTree);
+                r = findIdentities(rhs, identitiesTree);
+                ArDiv(l, r);
+            }
+
+            ArNeg(val): {
+                v = findIdentities(val, identitiesTree);
+                ArNeg(v);
+            }
+
+            ArRatNum(n, d): makeSimpleByIdentities(ArRatNum(n, d), identitiesTree);
+            ArVar(val): makeSimpleByIdentities(ArVar(val), identitiesTree);
+        }
+
+
+}
+
+main() {
+    idenitties = [
+        identity(parser("((a + b) * (a + b))"), parser("(((a * a) + (b * b)) + (2 * (a * b)))")),
+        identity(parser("((a - b) * (a - b))"), parser("(((a * a) + (b * b)) - (2 * (a * b)))")),
+        identity(parser("((a - b) * (a + b))"), parser("((a * a) - (b * b))")),
+        identity(parser("((x * z) + (y * z))"), parser("((x + y) * z)"))
+    ];
+
+    str = "(((x-y)*(x+y))/((x*z) + (y*z)))";
+
+    println("STR:" + str);
+    expr = parser(str);
+    
+    identExpr = findIdentities(expr, makeIdentitiesTree(idenitties));
+    //simpleArExpr = make2simple(identExpr);
+
+    ratFunc = calculateRatFunc(identExpr);
+    println("RatFunc:\n" + RatFunc2s(ratFunc) + "\n");
+    
+    //simpleFunc = makeSimpleFunc(ratFunc);
+    println("Result: \n" + similarParts2s(ratFunc));
+}
