@@ -15,62 +15,37 @@ decomp(m : Maybe<?>, ifNone : ?) -> ? {
     }
 }
 
-findIdentities(expr: ArExpr, identitiesTree : Tree<ArExpr, ArExpr>) -> ArExpr{
-    e = decomp(lookupTree(identitiesTree, expr), expr);
-    res = switch (e) {
-        ArSum(lhs, rhs): {
-            l = findIdentities(lhs, identitiesTree);
-            r = findIdentities(rhs, identitiesTree);
-            ArSum(l, r);
-        }
-        ArSub(lhs, rhs): {
-            l = findIdentities(lhs, identitiesTree);
-            r = findIdentities(rhs, identitiesTree);
-            ArSub(l, r);
-        }
-        ArMult(lhs, rhs): {
-            l = findIdentities(lhs, identitiesTree);
-            r = findIdentities(rhs, identitiesTree);
-            ArMult(l, r);
-        }
-        ArDiv(lhs, rhs): {
-            l = findIdentities(lhs, identitiesTree);
-            r = findIdentities(rhs, identitiesTree);
-            ArDiv(l, r);
-        }
-        ArNeg(val): {
-            v = findIdentities(val, identitiesTree);
-            ArNeg(v);
-        }
+findIdentities(expr: ArExpr, identitiesTree : Tree<ArExpr, ArExpr>) -> ArExpr {
+    result = switch(decomp(lookupTree(identitiesTree, expr), expr)) {
+        ArSum(lhs, rhs): ArSum(findIdentities(lhs, identitiesTree), findIdentities(rhs, identitiesTree));
+        ArSub(lhs, rhs): ArSub(findIdentities(lhs, identitiesTree), findIdentities(rhs, identitiesTree));
+        ArMult(lhs, rhs): ArMult(findIdentities(lhs, identitiesTree), findIdentities(rhs, identitiesTree));
+        ArDiv(lhs, rhs): ArDiv(findIdentities(lhs, identitiesTree), findIdentities(rhs, identitiesTree));
+        ArNeg(val): ArNeg(findIdentities(val, identitiesTree));
         ArRatNum(n, d): decomp(lookupTree(identitiesTree, expr), ArRatNum(n, d));
         ArVar(val): decomp(lookupTree(identitiesTree, expr), ArVar(val));
     }
 
-    foldTree(identitiesTree, res, \ident, value, acc -> {
+    foldTree(identitiesTree, result, \ident, value, acc -> {
         isMatch = findTemplates(ident, acc, makeTree());
-        switch(isMatch) {
-            Some(val) : resolveVars(value, val);
-            None() : acc;
-        }
+        isMatch ?? resolveVars(value, isMatch) : acc;
     });
 }
 
 resolveVars(expr : ArExpr, varResolve : Tree<ArVar, ArExpr>) -> ArExpr {
     switch(expr) {
+        ArSum(lhs, rhs): ArSum(resolveVars(lhs, varResolve), resolveVars(rhs, varResolve));
+        ArSub(lhs, rhs): ArSub(resolveVars(lhs, varResolve), resolveVars(rhs, varResolve));
+        ArDiv(lhs, rhs): ArDiv(resolveVars(lhs, varResolve), resolveVars(rhs, varResolve));
+        ArMult(lhs, rhs): ArMult(resolveVars(lhs, varResolve), resolveVars(rhs, varResolve));
         ArRatNum(n,d): expr;
-        ArVar(val) : decomp(lookupTree(varResolve, expr), expr);
-        ArSum(l, r): ArSum(resolveVars(l, varResolve), resolveVars(r, varResolve));
-        ArSub(l, r): ArSub(resolveVars(l, varResolve), resolveVars(r, varResolve));
-        ArDiv(l, r): ArDiv(resolveVars(l, varResolve), resolveVars(r, varResolve));
-        ArMult(l, r): ArMult(resolveVars(l, varResolve), resolveVars(r, varResolve));
-        ArNeg(val) : {
+        ArVar(val): decomp(lookupTree(varResolve, expr), expr);
+        ArNeg(val): {
             var = resolveVars(val, varResolve);
             switch(var) {
-                ArRatNum(n,d) : ArNeg(var);
-                ArVar(v) : ArNeg(var);
-                default : {
-                    ArNeg(ArRatNum(1,1));
-                }
+                ArRatNum(n,d): ArNeg(var);
+                ArVar(v): ArNeg(var);
+                default: ArNeg(ArRatNum(1,1));
             }
         }
     }
@@ -81,11 +56,8 @@ findTemplates(templ : ArExpr, expr : ArExpr, identitiesTree : Tree<ArVar, ArExpr
         ArSum(lhs, rhs): {
             switch(expr) {
                 ArSum(l, r): {
-                     match = findTemplates(lhs, l, identitiesTree);
-                        switch(match) {
-                            Some(v): findTemplates(rhs, r, v);
-                            None(): None();
-                        }                   
+                    match = findTemplates(lhs, l, identitiesTree);     
+                    match ?? findTemplates(rhs, r, match) : None();      
                 } 
                 default: None();
             }
@@ -93,11 +65,8 @@ findTemplates(templ : ArExpr, expr : ArExpr, identitiesTree : Tree<ArVar, ArExpr
         ArSub(lhs, rhs): {
             switch(expr) {
                 ArSub(l, r): {
-                    match = findTemplates(lhs, l, identitiesTree);
-                        switch(match) {
-                            Some(v): findTemplates(rhs, r, v);
-                            None(): None();
-                        }   
+                    match = findTemplates(lhs, l, identitiesTree); 
+                    match ?? findTemplates(rhs, r, match) : None();  
                 }
                 default: None();
             }
@@ -105,11 +74,8 @@ findTemplates(templ : ArExpr, expr : ArExpr, identitiesTree : Tree<ArVar, ArExpr
         ArMult(lhs, rhs): {
             switch(expr) {
                 ArMult(l, r): {
-                    match = findTemplates(lhs, l, identitiesTree);
-                        switch(match) {
-                            Some(v): findTemplates(rhs, r, v);
-                            None(): None();
-                        }   
+                    match = findTemplates(lhs, l, identitiesTree); 
+                    match ?? findTemplates(rhs, r, match) : None(); 
                 }
                 default: None();
             }
@@ -118,10 +84,7 @@ findTemplates(templ : ArExpr, expr : ArExpr, identitiesTree : Tree<ArVar, ArExpr
             switch(expr) {
                 ArDiv(l, r): {
                     match = findTemplates(lhs, l, identitiesTree);
-                        switch(match) {
-                            Some(v): findTemplates(rhs, r, v);
-                            None(): None();
-                        }   
+                    match ?? findTemplates(rhs, r, match) : None();  
                 }
                 default: None();
             }
@@ -141,19 +104,7 @@ findTemplates(templ : ArExpr, expr : ArExpr, identitiesTree : Tree<ArVar, ArExpr
         }
         ArVar(var): {
             val = lookupTree(identitiesTree, templ);
-            switch(val) {
-                Some(v): {
-                    if (v == expr) {
-                         Some(identitiesTree); 
-                    }
-                    else { 
-                        None();
-                    }
-                }
-                None(): { 
-                    Some(setTree(identitiesTree, templ, expr)); 
-                }
-           }
+            val ?? if (val == expr) Some(identitiesTree) else None() : Some(setTree(identitiesTree, templ, expr));
         }
         ArNeg(val): {
             switch(expr) {
@@ -179,7 +130,7 @@ main() {
     //str = "(x + x)";
     str = "(((x * x) - (y * y)) / ((a * a) - (b * b)))";
 
-    println("STR:" + str);
+    println("STR: " + str);
     expr = parser(str);
     
     identExpr = findIdentities(expr, makeIdentitiesTree(idenitties));
