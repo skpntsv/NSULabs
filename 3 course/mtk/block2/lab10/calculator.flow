@@ -137,16 +137,16 @@ ar2s(e: ArExpr) -> string {
         ArNeg(val): "(-" + ar2s(val) + ")";
         ArVar(val): val;
         ArRatNum(n,d) :{
-            if(d == 1){
+            if (d == 1) {
                 i2s(n);
             }
-            else if(n == 0 && d != 0){
+            else if (n == 0 && d != 0){
                 i2s(0);
             }
-            else if(d == 0){
+            else if (d == 0) {
                 "Error! Division by zero!";
             }
-            else{
+            else {
                 i2s(n) + "/" + i2s(d);
             }
         }
@@ -154,9 +154,9 @@ ar2s(e: ArExpr) -> string {
 }
 
 parser(str : string) -> ArExpr {
-    e_gr = "#include ../lingo/full_arith.lingo";
+    e_gr = "#include ../lingo/ratNum_arith.lingo";
     parsic(
-        compilePegGrammar("#include ../lingo/ratNum_arith.lingo"),
+        compilePegGrammar(e_gr),
         str,
         defaultPegActions
     );
