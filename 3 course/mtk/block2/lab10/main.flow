@@ -1,4 +1,4 @@
-import calculator_pol;
+import calculator;
 
 identity(from: ArExpr, to: ArExpr);
 
@@ -8,74 +8,181 @@ makeIdentitiesTree(identities: [identity]) -> Tree<ArExpr, ArExpr> {
         });
 }
 
-makeSimpleByIdentities(expr: ArExpr, identitiesTree : Tree<ArExpr, ArExpr>) -> ArExpr{
-    if (containsKeyTree(identitiesTree, expr)) {
-        identTo = lookupTree(identitiesTree, expr);
-        identTo ?? identTo : expr;
-    }
-    else {
-        expr;
+decomp(m : Maybe<?>, ifNone : ?) -> ? {
+    switch(m) {
+        Some(v): v;
+        None(): ifNone;
     }
 }
 
 findIdentities(expr: ArExpr, identitiesTree : Tree<ArExpr, ArExpr>) -> ArExpr{
-    e = makeSimpleByIdentities(expr, identitiesTree);
-        switch (e) {
-            ArSum(lhs, rhs): {
-                l = findIdentities(lhs, identitiesTree);
-                r = findIdentities(rhs, identitiesTree);
-                ArSum(l, r);
-            }
-
-            ArSub(lhs, rhs): {
-                l = findIdentities(lhs, identitiesTree);
-                r = findIdentities(rhs, identitiesTree);
-                ArSub(l, r);
-            }
-
-            ArMult(lhs, rhs): {
-                l = findIdentities(lhs, identitiesTree);
-                r = findIdentities(rhs, identitiesTree);
-                ArMult(l, r);
-            }
-
-            ArDiv(lhs, rhs): {
-                l = findIdentities(lhs, identitiesTree);
-                r = findIdentities(rhs, identitiesTree);
-                ArDiv(l, r);
-            }
-
-            ArNeg(val): {
-                v = findIdentities(val, identitiesTree);
-                ArNeg(v);
-            }
-
-            ArRatNum(n, d): makeSimpleByIdentities(ArRatNum(n, d), identitiesTree);
-            ArVar(val): makeSimpleByIdentities(ArVar(val), identitiesTree);
+    e = decomp(lookupTree(identitiesTree, expr), expr);
+    res = switch (e) {
+        ArSum(lhs, rhs): {
+            l = findIdentities(lhs, identitiesTree);
+            r = findIdentities(rhs, identitiesTree);
+            ArSum(l, r);
         }
+        ArSub(lhs, rhs): {
+            l = findIdentities(lhs, identitiesTree);
+            r = findIdentities(rhs, identitiesTree);
+            ArSub(l, r);
+        }
+        ArMult(lhs, rhs): {
+            l = findIdentities(lhs, identitiesTree);
+            r = findIdentities(rhs, identitiesTree);
+            ArMult(l, r);
+        }
+        ArDiv(lhs, rhs): {
+            l = findIdentities(lhs, identitiesTree);
+            r = findIdentities(rhs, identitiesTree);
+            ArDiv(l, r);
+        }
+        ArNeg(val): {
+            v = findIdentities(val, identitiesTree);
+            ArNeg(v);
+        }
+        ArRatNum(n, d): decomp(lookupTree(identitiesTree, expr), ArRatNum(n, d));
+        ArVar(val): decomp(lookupTree(identitiesTree, expr), ArVar(val));
+    }
 
+    foldTree(identitiesTree, res, \ident, value, acc -> {
+        isMatch = findTemplates(ident, acc, makeTree());
+        switch(isMatch) {
+            Some(val) : resolveVars(value, val);
+            None() : acc;
+        }
+    });
+}
 
+resolveVars(expr : ArExpr, varResolve : Tree<ArVar, ArExpr>) -> ArExpr {
+    switch(expr) {
+        ArRatNum(n,d): expr;
+        ArVar(val) : decomp(lookupTree(varResolve, expr), expr);
+        ArSum(l, r): ArSum(resolveVars(l, varResolve), resolveVars(r, varResolve));
+        ArSub(l, r): ArSub(resolveVars(l, varResolve), resolveVars(r, varResolve));
+        ArDiv(l, r): ArDiv(resolveVars(l, varResolve), resolveVars(r, varResolve));
+        ArMult(l, r): ArMult(resolveVars(l, varResolve), resolveVars(r, varResolve));
+        ArNeg(val) : {
+            var = resolveVars(val, varResolve);
+            switch(var) {
+                ArRatNum(n,d) : ArNeg(var);
+                ArVar(v) : ArNeg(var);
+                default : {
+                    ArNeg(ArRatNum(1,1));
+                }
+            }
+        }
+    }
+}
+
+findTemplates(templ : ArExpr, expr : ArExpr, identitiesTree : Tree<ArVar, ArExpr>) -> Maybe<Tree<ArVar, ArExpr>> {
+    switch(templ) {
+        ArSum(lhs, rhs): {
+            switch(expr) {
+                ArSum(l, r): {
+                     match = findTemplates(lhs, l, identitiesTree);
+                        switch(match) {
+                            Some(v): findTemplates(rhs, r, v);
+                            None(): None();
+                        }                   
+                } 
+                default: None();
+            }
+        }
+        ArSub(lhs, rhs): {
+            switch(expr) {
+                ArSub(l, r): {
+                    match = findTemplates(lhs, l, identitiesTree);
+                        switch(match) {
+                            Some(v): findTemplates(rhs, r, v);
+                            None(): None();
+                        }   
+                }
+                default: None();
+            }
+        }
+        ArMult(lhs, rhs): {
+            switch(expr) {
+                ArMult(l, r): {
+                    match = findTemplates(lhs, l, identitiesTree);
+                        switch(match) {
+                            Some(v): findTemplates(rhs, r, v);
+                            None(): None();
+                        }   
+                }
+                default: None();
+            }
+        }
+        ArDiv(lhs, rhs): {
+            switch(expr) {
+                ArDiv(l, r): {
+                    match = findTemplates(lhs, l, identitiesTree);
+                        switch(match) {
+                            Some(v): findTemplates(rhs, r, v);
+                            None(): None();
+                        }   
+                }
+                default: None();
+            }
+        }
+        ArRatNum(n,d): {
+            switch(expr) {
+                ArRatNum(n1,d1): {
+                    if (templ == expr) {
+                        Some(identitiesTree);
+                    }
+                    else {
+                        None();
+                    }
+                }
+                default: None();
+            }
+        }
+        ArVar(var): {
+            val = lookupTree(identitiesTree, templ);
+            switch(val) {
+                Some(v): {
+                    if (v == expr) {
+                         Some(identitiesTree); 
+                    }
+                    else { 
+                        None();
+                    }
+                }
+                None(): { 
+                    Some(setTree(identitiesTree, templ, expr)); 
+                }
+           }
+        }
+        ArNeg(val): {
+            switch(expr) {
+                ArNeg(val2): findTemplates(val, val2, identitiesTree);
+                default: None();
+            }
+        }
+  }
 }
 
 main() {
     idenitties = [
-        identity(parser("((a + b) * (a + b))"), parser("(((a * a) + (b * b)) + (2 * (a * b)))")),
-        identity(parser("((a - b) * (a - b))"), parser("(((a * a) + (b * b)) - (2 * (a * b)))")),
-        identity(parser("((a - b) * (a + b))"), parser("((a * a) - (b * b))")),
-        identity(parser("((x * z) + (y * z))"), parser("((x + y) * z)"))
+        //identity(parser("((a + b) * (a + b))"), parser("(((a * a) + (b * b)) + (2 * (a * b)))")),
+        //identity(parser("((a - b) * (a - b))"), parser("(((a * a) + (b * b)) - (2 * (a * b)))")),
+        //identity(parser("((a - b) * (a + b))"), parser("((a * a) - (b * b))")),
+        //identity(parser("((x * z) + (y * z))"), parser("((x + y) * z)")),
+        //identity(parser("(x + x)"), parser("(2 * x)")),
+        identity(parser("((x * x) - (y * y))"), parser("((x + y) * (x - y))"))
+        //identity(parser("((a * a) - (b * b))"), parser("((a + b) * (a - b))"))
     ];
 
-    str = "(((x-y)*(x+y))/((x*z) + (y*z)))";
+    //str = "(((x-y)*(x+y))/((x*z) + (y*z)))";
+    //str = "(x + x)";
+    str = "(((x * x) - (y * y)) / ((a * a) - (b * b)))";
 
     println("STR:" + str);
     expr = parser(str);
     
     identExpr = findIdentities(expr, makeIdentitiesTree(idenitties));
-    //simpleArExpr = make2simple(identExpr);
 
-    ratFunc = calculateRatFunc(identExpr);
-    println("RatFunc:\n" + RatFunc2s(ratFunc) + "\n");
-    
-    //simpleFunc = makeSimpleFunc(ratFunc);
-    println("Result: \n" + similarParts2s(ratFunc));
+    println("\nResult: " + ar2s(identExpr));
 }
