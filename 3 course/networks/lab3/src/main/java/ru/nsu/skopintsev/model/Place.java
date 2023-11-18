@@ -12,7 +12,7 @@ public class Place {
 
     @Override
     public String toString() {
-        return "\tМесто: " + name +
+        return "Место: " + name +
                 "\n\tDescription: " + description;
     }
 }

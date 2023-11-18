@@ -2,6 +2,7 @@ package ru.nsu.skopintsev.controller;
 
 import ru.nsu.skopintsev.model.*;
 
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
@@ -36,25 +37,22 @@ public class MainController {
                     CompletableFuture<String[]> placesFuture = placesController.getInterestingPlaces(
                             selectedLocation.getLat(), selectedLocation.getLng());
 
-                    CompletableFuture<Place[]> placesWithDescFuture = placesFuture.thenCompose(xids -> {
+                    placesFuture.thenAccept(xids -> {
                         PlaceDescriptionController placeDescriptionController = new PlaceDescriptionController();
-                        return placeDescriptionController.getPlacesDescriptions(xids);
-                    });
-
-                    CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(weatherFuture, placesWithDescFuture);
-
-                    combinedFuture.thenAccept(ignored -> {
+                        ArrayList<Place> places = placeDescriptionController.getPlacesDescriptions(xids);
                         try {
-                            Result result = new Result(selectedLocation, weatherFuture.join(), placesWithDescFuture.join());
+                            Result result = new Result(selectedLocation, weatherFuture.get(), places);
 
                             showFinalResults(result);
                         } catch (Exception e) {
-                            e.printStackTrace();
+                            System.err.println(e.getMessage());
+
+                            showFinalResults(new Result(selectedLocation, places));
                         }
                     });
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                System.err.println(e.getMessage());
             }
         });
     }
@@ -64,8 +62,10 @@ public class MainController {
         System.out.println(result.getWeather());
 
         for (Place place : result.getPlaces()) {
-            System.out.println(place);
+            System.out.println("\n" + place);
             System.out.println();
         }
+
+        System.out.println("THE END");
     }
 }

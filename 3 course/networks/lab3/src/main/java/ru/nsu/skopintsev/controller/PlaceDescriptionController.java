@@ -11,8 +11,8 @@ import ru.nsu.skopintsev.model.Place;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 public class PlaceDescriptionController {
     private final PlaceDescriptionService placeDescriptionService;
@@ -23,68 +23,75 @@ public class PlaceDescriptionController {
         this.httpClient = new OkHttpClient();
     }
 
-    public CompletableFuture<Place[]> getPlacesDescriptions(String[] xids) {
+//    public CompletableFuture<Place[]> getPlacesDescriptions(String[] xids) {
+//        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+//
+//        return allOf.thenApply(v ->
+//                futures.stream()
+//                        //.map(future -> future.exceptionally(ex -> null).join())
+//                        .map(CompletableFuture::join)
+//                        .filter(Objects::nonNull)
+//                        .toArray(Place[]::new)
+//        );
+//    }
+
+    public ArrayList<Place> getPlacesDescriptions(String[] xids) {
+        ArrayList<Place> places = new ArrayList<>();
         List<CompletableFuture<Place>> futures = new ArrayList<>();
 
         for (String xid : xids) {
-            CompletableFuture<Place> future = new CompletableFuture<>();
-            futures.add(future);
-//            future.exceptionally(ex -> {
-//                //System.err.println(ex.getMessage());
-//                System.err.println(future.toString());
-//                futures.remove(future);
-//                return null;
-//            });
-//            if (future.isDone() && !future.isCompletedExceptionally()) {
-//                futures.add(future);
-//                System.out.println(future);
-//            }
-//            if (!future.isCompletedExceptionally()) {
-//                futures.add(future);
-//                //System.out.println(future.toString());
-//            }
-
-            httpClient.newCall(placeDescriptionService.getRequest(xid)).enqueue(new okhttp3.Callback() {
-                @Override
-                public void onResponse(@NotNull okhttp3.Call call, @NotNull Response response) throws IOException {
-                    if (response.isSuccessful()) {
-                        ResponseBody responseBody = response.body();
-                        if (responseBody != null) {
-                            try {
-                                PlaceDescriptionResponse placeDescriptionResponse =
-                                        placeDescriptionService.responseBodyToModel(responseBody);
-
-                                //Objects.requireNonNull(placeDescriptionResponse.getName(), "Name is null");
-                                //Objects.requireNonNull(placeDescriptionResponse.getPoint(), "Point is null");
-                                //Objects.requireNonNull(placeDescriptionResponse.getInfo(), "Info is null");
-                                //Objects.requireNonNull(placeDescriptionResponse.getInfo().getDescr(), "Descr is null");
-                                //System.out.println(placeDescriptionResponse.toString());
-                                future.complete(mapPlaceDescriptionResponseToPlace(placeDescriptionResponse));
-                            } catch (NullPointerException e) {
-                                future.completeExceptionally(e);
-                            }
-                        } else {
-                            future.completeExceptionally(new IOException("Empty response body"));
-                        }
-                    } else {
-                        future.completeExceptionally(new IOException("Request failed with status code: " + response.code()));
-                    }
-                }
-
-                @Override
-                public void onFailure(@NotNull okhttp3.Call call, @NotNull IOException e) {
-                    future.completeExceptionally(e);
-                }
-            });
+            CompletableFuture<Place> placeFuture = getOnePlaceDesc(xid);
+            futures.add(placeFuture);
         }
 
-        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        for (CompletableFuture<Place> placeFuture : futures) {
+            try {
+                Place place = placeFuture.join();
+                places.add(place);
+            } catch (CompletionException e) {
+                System.out.println("An error occurred: " + e.getCause().getMessage());
+            }
+        }
 
-        return allOf.thenApply(v ->
-                futures.stream()
-                        .map(CompletableFuture::join)
-                        .toArray(Place[]::new)
-        );
+        return places;
+    }
+
+    private CompletableFuture<Place> getOnePlaceDesc(String xid) {
+        CompletableFuture<Place> future = new CompletableFuture<>();
+        httpClient.newCall(placeDescriptionService.getRequest(xid)).enqueue(new okhttp3.Callback() {
+            @Override
+            public void onResponse(@NotNull okhttp3.Call call, @NotNull Response response) {
+                if (response.isSuccessful()) {
+                    ResponseBody responseBody = response.body();
+                    if (responseBody != null) {
+                        try {
+                            PlaceDescriptionResponse placeDescriptionResponse =
+                                    placeDescriptionService.responseBodyToModel(responseBody);
+
+                            if (placeDescriptionResponse.getName() != null
+                                    && placeDescriptionResponse.getPoint() != null) {
+                                future.complete(mapPlaceDescriptionResponseToPlace(placeDescriptionResponse));
+                            } else {
+                                future.completeExceptionally(new NullPointerException("One of the mandatory fields is null"));
+                            }
+                        } catch (Exception e) {
+                            future.completeExceptionally(e);
+                        }
+                    } else {
+                        future.completeExceptionally(new IOException("Empty response body"));
+                    }
+                } else {
+                    future.completeExceptionally(new IOException("Request failed with status code: " + response.code()));
+                }
+            }
+
+            @Override
+            public void onFailure(@NotNull okhttp3.Call call, @NotNull IOException e) {
+                future.completeExceptionally(e);
+            }
+        });
+
+        return future;
     }
 
     private Place mapPlaceDescriptionResponseToPlace(PlaceDescriptionResponse placeDescriptionResponse) {
@@ -92,7 +99,11 @@ public class PlaceDescriptionController {
         place.setName(placeDescriptionResponse.getName());
         place.setLat(placeDescriptionResponse.getPoint().getLat());
         place.setLng(placeDescriptionResponse.getPoint().getLon());
-        place.setDescription(placeDescriptionResponse.getInfo().getDescr());
+        if (placeDescriptionResponse.getInfo() == null) {
+            place.setDescription("not stated");
+        } else {
+            place.setDescription(placeDescriptionResponse.getInfo().getDescr());
+        }
 
         return place;
     }

@@ -5,16 +5,14 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import org.jetbrains.annotations.NotNull;
 import ru.nsu.skopintsev.api.responses.PlacesResponse;
-import ru.nsu.skopintsev.api.responses.WeatherResponse;
 import ru.nsu.skopintsev.api.services.PlacesService;
-import ru.nsu.skopintsev.model.Weather;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 public class PlacesController {
-    private static final int RADIUS = 10000; // in metres
+    private static final int RADIUS = 1000; // in metres
     private final PlacesService placesService;
     private final OkHttpClient httpClient;
 
