@@ -11,7 +11,7 @@ public class PlacesService {
     private static final String API_URL = "https://api.opentripmap.com/0.1/ru/places/radius";
 
     public Request getRequest(double lat, double lng, int radius) {
-
+        String apiKey = "YOUR_API_KEY";
         String apiUrl = API_URL + "?radius=" + radius + "&lat=" + lat + "&lon=" + lng +
                 "&format=json" + "&apikey=" + apiKey;
 
@@ -23,12 +23,11 @@ public class PlacesService {
         return request;
     }
 
-    public PlacesResponse responseBodyToModel(ResponseBody responseBody) throws IOException {
+    public PlacesResponse.Place[] responseBodyToModel(ResponseBody responseBody) throws IOException {
         String json = responseBody.string();
 
         Gson gson = new Gson();
-        PlacesResponse.Place[] places = gson.fromJson(json, PlacesResponse.Place[].class);
 
-        return new PlacesResponse(places);
+        return gson.fromJson(json, PlacesResponse.Place[].class);
     }
 }

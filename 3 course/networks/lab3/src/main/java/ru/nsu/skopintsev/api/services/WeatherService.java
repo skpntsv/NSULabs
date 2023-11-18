@@ -11,7 +11,7 @@ public class WeatherService {
     private static final String API_URL = "https://api.openweathermap.org/data/2.5/weather";
 
     public Request getRequest(double lat, double lng) {
-
+        String apiKey = "YOUR_API_KEY";
         String apiUrl = API_URL + "?units=metric" + "&lat=" + lat + "&lon=" + lng +"&appid=" + apiKey;
 
         Request request = new Request.Builder()
@@ -26,8 +26,7 @@ public class WeatherService {
         String json = responseBody.string();
 
         Gson gson = new Gson();
-        WeatherResponse weatherResponse = gson.fromJson(json, WeatherResponse.class);
 
-        return weatherResponse;
+        return gson.fromJson(json, WeatherResponse.class);
     }
 }
