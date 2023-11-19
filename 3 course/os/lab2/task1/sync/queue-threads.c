@@ -72,31 +72,34 @@ void *writer(void *arg) {
 }
 
 int main() {
-	pthread_t tid;
+	pthread_t tid_reader;
+	pthread_t tid_writer;
 	queue_t *q;
 	int err;
 
 	printf("main [%d %d %d]\n", getpid(), getppid(), gettid());
 
-	q = queue_init(1000000);
+	q = queue_init(10000);
 
-	err = pthread_create(&tid, NULL, reader, q);
+	err = pthread_create(&tid_reader, NULL, reader, q);
 	if (err) {
 		printf("main: pthread_create() failed: %s\n", strerror(err));
 		return -1;
 	}
-
 	sched_yield();
 
-	err = pthread_create(&tid, NULL, writer, q);
+	err = pthread_create(&tid_writer, NULL, writer, q);
 	if (err) {
 		printf("main: pthread_create() failed: %s\n", strerror(err));
 		return -1;
 	}
 
-	// TODO: join threads
-
-	pthread_exit(NULL);
+	if (pthread_join(tid_reader, NULL)) {
+		perror("pthread_join - tid_reader");
+	}
+	if (pthread_join(tid_writer, NULL)) {
+		perror("pthread_join - tid_writer");
+	}
 
 	return 0;
 }
