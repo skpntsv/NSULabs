@@ -23,18 +23,6 @@ public class PlaceDescriptionController {
         this.httpClient = new OkHttpClient();
     }
 
-//    public CompletableFuture<Place[]> getPlacesDescriptions(String[] xids) {
-//        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-//
-//        return allOf.thenApply(v ->
-//                futures.stream()
-//                        //.map(future -> future.exceptionally(ex -> null).join())
-//                        .map(CompletableFuture::join)
-//                        .filter(Objects::nonNull)
-//                        .toArray(Place[]::new)
-//        );
-//    }
-
     public ArrayList<Place> getPlacesDescriptions(String[] xids) {
         ArrayList<Place> places = new ArrayList<>();
         List<CompletableFuture<Place>> futures = new ArrayList<>();
@@ -62,23 +50,27 @@ public class PlaceDescriptionController {
             @Override
             public void onResponse(@NotNull okhttp3.Call call, @NotNull Response response) {
                 if (response.isSuccessful()) {
-                    ResponseBody responseBody = response.body();
-                    if (responseBody != null) {
-                        try {
-                            PlaceDescriptionResponse placeDescriptionResponse =
-                                    placeDescriptionService.responseBodyToModel(responseBody);
+                    try (ResponseBody responseBody = response.body()) {
+                        if (responseBody != null) {
+                            try {
+                                PlaceDescriptionResponse placeDescriptionResponse =
+                                        placeDescriptionService.responseBodyToModel(responseBody);
 
-                            if (placeDescriptionResponse.getName() != null
-                                    && placeDescriptionResponse.getPoint() != null) {
-                                future.complete(mapPlaceDescriptionResponseToPlace(placeDescriptionResponse));
-                            } else {
-                                future.completeExceptionally(new NullPointerException("One of the mandatory fields is null"));
+                                if (placeDescriptionResponse.getName() != null
+                                        && placeDescriptionResponse.getPoint() != null) {
+                                    future.complete(mapPlaceDescriptionResponseToPlace(placeDescriptionResponse));
+                                } else {
+                                    future.completeExceptionally(new NullPointerException("One of the mandatory fields is null"));
+                                }
+                            } catch (Exception e) {
+                                future.completeExceptionally(e);
                             }
-                        } catch (Exception e) {
-                            future.completeExceptionally(e);
+                        } else {
+                            future.completeExceptionally(new IOException("Empty response body"));
                         }
-                    } else {
-                        future.completeExceptionally(new IOException("Empty response body"));
+                    } finally {
+                        assert response.body() != null;
+                        response.body().close();
                     }
                 } else {
                     future.completeExceptionally(new IOException("Request failed with status code: " + response.code()));
