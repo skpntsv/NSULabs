@@ -13,6 +13,7 @@ public class Result {
     public Result(Location location, List<Place> places) {
         this.location = location;
         this.places = places;
+        this.weather = null;
     }
 
     public Result(Location selectedLocation, Weather weather, List<Place> places) {
