@@ -4,7 +4,7 @@ sum = "(" ws S:l ws "+" ws S:r ws ")" { ArSum(:l, :r) };
 mul = "(" ws S:l ws "*" ws S:r ws ")" { ArMult(:l, :r) };
 sub = "(" ws S:l ws "-" ws S:r ws ")" { ArSub(:l, :r) };
 div = "(" ws S:l ws "/" ws S:r ws ")" { ArDiv(:l, :r) };
-negative = ws "-" ws S:v ws           { ArNeg(:v) };
+negative = "(" ws "-" ws S:v ")" ws           { ArNeg(:v) };
 
 
 int = digit+ $s { ArRatNum( s2i($s), 1) };
