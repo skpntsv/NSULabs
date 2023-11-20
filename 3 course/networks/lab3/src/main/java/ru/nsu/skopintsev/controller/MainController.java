@@ -9,26 +9,15 @@ import java.util.concurrent.CompletableFuture;
 public class MainController {
     public void start() {
         Scanner scanner = new Scanner(System.in);
-
-        System.out.print("Введите название локации: ");
-        String locationName = scanner.nextLine();
+        String locationName = askLocationName(scanner);
 
         LocationController locationController = new LocationController();
         CompletableFuture<Location[]> locationFuture = locationController.searchLocations(locationName);
 
         locationFuture.thenAccept(locations -> {
             try {
-                if (locations.length > 0) {
-                    System.out.println("Выберите локацию:");
-                    for (int i = 0; i < locations.length; i++) {
-                        System.out.println(i + 1 + ". " + locations[i]);
-                    }
-
-                    System.out.print("Введите номер выбранной локации: ");
-                    int selectedLocationIndex = Integer.parseInt(scanner.nextLine()) - 1;
-                    System.out.println();
-                    Location selectedLocation = locations[selectedLocationIndex];
-
+                Location selectedLocation = chooseLocation(locations, scanner);
+                if (selectedLocation != null) {
                     WeatherController weatherController = new WeatherController();
                     CompletableFuture<Weather> weatherFuture = weatherController.getWeatherByCoords(
                             selectedLocation.getLat(), selectedLocation.getLng());
@@ -50,6 +39,8 @@ public class MainController {
                             showFinalResults(new Result(selectedLocation, places));
                         }
                     });
+                } else {
+                    System.err.println("Места не найдены");
                 }
             } catch (Exception e) {
                 System.err.println(e.getCause().getMessage());
@@ -58,6 +49,28 @@ public class MainController {
             System.err.println("ERROR " + ex.getCause().getMessage());
             return null;
         });
+    }
+
+    private String askLocationName(Scanner scanner) {
+        System.out.print("Введите название локации: ");
+
+        return scanner.nextLine();
+    }
+
+    private Location chooseLocation(Location[] locations,Scanner scanner) {
+        if (locations.length > 0) {
+            System.out.println("Выберите локацию:");
+            for (int i = 0; i < locations.length; i++) {
+                System.out.println(i + 1 + ". " + locations[i]);
+            }
+
+            System.out.print("Введите номер выбранной локации: ");
+            int selectedLocationIndex = Integer.parseInt(scanner.nextLine()) - 1;
+            System.out.println();
+
+            return locations[selectedLocationIndex];
+        }
+        return null;
     }
 
     private void showFinalResults(Result result) {
