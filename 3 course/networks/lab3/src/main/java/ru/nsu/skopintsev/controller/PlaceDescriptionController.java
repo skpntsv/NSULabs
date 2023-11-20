@@ -49,7 +49,7 @@ public class PlaceDescriptionController {
                 Place place = placeFuture.join();
                 places.add(place);
             } catch (CompletionException e) {
-                System.out.println("An error occurred: " + e.getCause().getMessage());
+                //System.err.println("ERROR: " + e.getCause().getMessage());
             }
         }
 
