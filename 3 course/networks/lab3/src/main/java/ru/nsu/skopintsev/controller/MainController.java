@@ -52,8 +52,11 @@ public class MainController {
                     });
                 }
             } catch (Exception e) {
-                System.err.println(e.getMessage());
+                System.err.println(e.getCause().getMessage());
             }
+        }).exceptionally(ex -> {
+            System.err.println("ERROR " + ex.getCause().getMessage());
+            return null;
         });
     }
 
