@@ -65,11 +65,6 @@ void *writer(void *arg) {
 		if (!ok)
 			continue;
 		i++;
-
-		// Иногда спим
-		// if ((i % 3) == 0) {
-		// 	usleep(1000);
-		// }
 	}
 
 	return NULL;
