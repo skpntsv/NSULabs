@@ -7,7 +7,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <pthread.h>
 #include <sched.h>
 
 #include "queue.h"
@@ -66,6 +65,11 @@ void *writer(void *arg) {
 		if (!ok)
 			continue;
 		i++;
+
+		// Иногда спим
+		// if ((i % 3) == 0) {
+		// 	usleep(1000);
+		// }
 	}
 
 	return NULL;
@@ -86,7 +90,7 @@ int main() {
 		printf("main: pthread_create() failed: %s\n", strerror(err));
 		return -1;
 	}
-	sched_yield();
+	//sched_yield();
 
 	err = pthread_create(&tid_writer, NULL, writer, q);
 	if (err) {
