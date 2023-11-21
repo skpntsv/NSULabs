@@ -49,7 +49,6 @@ queue_t* queue_init(int max_count) {
 }
 
 void queue_destroy(queue_t *q) {
-
 	if (q == NULL) {
 		return;
 	}
@@ -76,6 +75,9 @@ int queue_add(queue_t *q, int val) {
 	assert(q->count <= q->max_count);
 
 	pthread_spin_lock(&q->lock);
+
+	if (q->get_attempts % 13 == 0)
+		usleep(1);
 
 	if (q->count == q->max_count) {
 		pthread_spin_unlock(&q->lock);
