@@ -77,7 +77,7 @@ int queue_add(queue_t *q, int val) {
 
 	pthread_mutex_lock(&q->lock);
 
-	if (q->get_attempts % 2 == 0)
+	if (q->get_attempts % 7 == 0)
 		usleep(1);
 
 	if (q->count == q->max_count) {
