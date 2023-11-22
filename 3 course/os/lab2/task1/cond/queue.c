@@ -92,8 +92,9 @@ int queue_add(queue_t *q, int val) {
 		pthread_cond_wait(&q->not_full, &q->lock);
 	}
 
-	// if (q->get_attempts % 7 == 0)
-	// 	usleep(1);
+	if (q->get_attempts % 7 == 0) {
+		usleep(1);
+	}
 
 	qnode_t *new = malloc(sizeof(qnode_t));
 	if (!new) {
@@ -116,7 +117,7 @@ int queue_add(queue_t *q, int val) {
 	q->count++;
 	q->add_count++;
 
-	pthread_cond_signal(&q->not_empty);
+	pthread_cond_broadcast(&q->not_empty);
 	pthread_mutex_unlock(&q->lock);
 
 	return 1;
@@ -142,7 +143,7 @@ int queue_get(queue_t *q, int *val) {
 	q->count--;
 	q->get_count++;
 
-	pthread_cond_signal(&q->not_full);
+	pthread_cond_broadcast(&q->not_full);
 	pthread_mutex_unlock(&q->lock);
 
 	return 1;
