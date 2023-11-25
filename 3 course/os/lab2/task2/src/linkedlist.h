@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#define MAX_STRING_LENGTH 100
+#define STRING_LENGTH 100
 
 typedef struct _Node {
-    char value[MAX_STRING_LENGTH];
+    char value[STRING_LENGTH];
     struct _Node* next;
     pthread_mutex_t sync;
 } Node;
@@ -19,12 +19,13 @@ typedef struct _Counter {
     pthread_mutex_t sync;
 } Counter;
 
-void initializeStorage(Storage* storage);
-void addNode(Storage* storage, const char* value);
+Storage* storage_init();
+void storage_add(Storage* storage, const char* value);
 void printList(Storage* storage);
+void storage_destroy(Storage* storage);
 
-void* ascendingLengthCount(void* args);
-void* descendingLengthCount(void* args);
-void* equalLengthCount(void* args);
+// void* ascendingLengthCount(void* args);
+// void* descendingLengthCount(void* args);
+// void* equalLengthCount(void* args);
 
-void* swapElements(void* args);
+// void* swapElements(void* args);
