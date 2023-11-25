@@ -1,0 +1,23 @@
+EXECUTABLES=main
+SOURCES=./src/
+
+TYPE=.c
+CC=gcc
+RM=rm
+CFLAGS=-Wall
+LIBS=src/linkedlist.c
+LDFLAGS=-o $@
+
+all: $(EXECUTABLES)
+
+$(EXECUTABLES): %: $(SOURCES)%$(TYPE)
+	$(CC) $(CFLAGS) $(LDFLAGS) $< ${LIBS}
+
+# linkedlist.o: linkedlist.c linkedlist.h
+#    $(CC) $(CFLAGS) -c $*.c
+
+run: $(EXECUTABLES)
+	./${EXECUTABLES}
+
+clean:
+	${RM} -f *.o $(EXECUTABLES)
