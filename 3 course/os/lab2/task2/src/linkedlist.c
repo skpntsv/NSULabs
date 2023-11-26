@@ -3,11 +3,6 @@
 
 #include "linkedlist.h"
 
-Storage storage;
-Counter ascendingCounter = {0, PTHREAD_MUTEX_INITIALIZER};
-Counter descendingCounter = {0, PTHREAD_MUTEX_INITIALIZER};
-Counter equalCounter = {0, PTHREAD_MUTEX_INITIALIZER};
-
 Storage* storage_init() {
     Storage* storage = (Storage*)malloc(sizeof(Storage));
     if (!storage) {
@@ -31,18 +26,26 @@ void storage_add(Storage* storage, const char* value) {
 		perror("pthread_mutex_init");
 		abort();
 	}
-    pthread_mutex_lock(&newNode->sync);
 
     newNode->next = storage->first;
     storage->first = newNode;
 }
 
-void printList(Storage* storage) {
+void fill_storage(Storage* storage, int num_nodes) {
+    for (int i = 0; i < num_nodes; ++i) {
+        char buff[10];
+        sprintf(buff, "%d", i);
+        add_node(storage, buff);
+    }
+}
+
+void print_storage(Storage* storage) {
     Node* current = storage->first;
     while (current != NULL) {
         printf("%s\n", current->value);
         current = current->next;
     }
+    printf("\n");
 }
 
 void storage_destroy(Storage* storage) {
