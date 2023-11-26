@@ -25,13 +25,7 @@ typedef struct _Counter {
 Storage* storage_init();
 void storage_add(Storage* storage, const char* value);
 void fill_storage(Storage* storage, int num_nodes);
-void printList(Storage* storage);
+void print_storage(Storage* storage);
 void storage_destroy(Storage* storage);
-
-// void* ascendingLengthCount(void* args);
-// void* descendingLengthCount(void* args);
-// void* equalLengthCount(void* args);
-
-// void* swapElements(void* args);
 
 #endif
