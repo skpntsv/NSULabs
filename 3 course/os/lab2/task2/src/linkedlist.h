@@ -1,3 +1,6 @@
+#ifndef LINKED_LIST_H
+#define LINKED_LIST_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -21,6 +24,7 @@ typedef struct _Counter {
 
 Storage* storage_init();
 void storage_add(Storage* storage, const char* value);
+void fill_storage(Storage* storage, int num_nodes);
 void printList(Storage* storage);
 void storage_destroy(Storage* storage);
 
@@ -29,3 +33,5 @@ void storage_destroy(Storage* storage);
 // void* equalLengthCount(void* args);
 
 // void* swapElements(void* args);
+
+#endif
