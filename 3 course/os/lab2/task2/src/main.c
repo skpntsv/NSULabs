@@ -98,7 +98,8 @@ void* random_swap(void* arg) {
         Node* next = current->next;
 
         while (next != NULL) {
-            if (rand() % 2 == 0) {
+            unsigned int seed = (unsigned int)pthread_self();
+            if (rand_r(&seed) % 2 == 0) {
                 swap_nodes(prev, current, next);
             }
 
@@ -141,7 +142,7 @@ int main() {
     pthread_t monitor;
     pthread_t equal_thread, ascending_thread, descending_thread;
     pthread_t swap1, swap2, swap3;
-    
+
     // ----------------------------------------------------------------------------
     // EQUAULS FUNCTIONS
     err = pthread_create(&equal_thread, NULL, equal_length_count, storage);
