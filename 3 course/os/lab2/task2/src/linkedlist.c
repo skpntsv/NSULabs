@@ -31,21 +31,19 @@ void storage_add(Storage* storage, const char* value) {
     storage->first = newNode;
 }
 
-void fill_storage(Storage* storage, int num_nodes) {
-    for (int i = 0; i < num_nodes; ++i) {
-        char buff[10];
-        sprintf(buff, "%d", i);
-        add_node(storage, buff);
-    }
-}
-
-void print_storage(Storage* storage) {
+void storage_print(Storage* storage) {
     Node* current = storage->first;
     while (current != NULL) {
         printf("%s\n", current->value);
         current = current->next;
     }
     printf("\n");
+}
+
+void swap_nodes(Node* prev, Node* current, Node* next) {
+    prev->next = next;
+    current->next = next->next;
+    next->next = current;
 }
 
 void storage_destroy(Storage* storage) {
