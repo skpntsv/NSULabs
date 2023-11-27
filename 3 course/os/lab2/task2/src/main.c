@@ -4,50 +4,71 @@
 
 #include "linkedlist.h"
 
-Counter ascendingCounter = {0, PTHREAD_MUTEX_INITIALIZER};
-Counter descendingCounter = {0, PTHREAD_MUTEX_INITIALIZER};
-Counter equalCounter = {0, PTHREAD_MUTEX_INITIALIZER};
+int ascending_counter = 0;
+int descending_counter = 0;
+int equal_counter = 0;
 
 void* ascending_length_count(void* arg) {
-    Storage* storage = (Storage *) args
+    Storage* storage = (Storage *) arg;
 
     while (1) {
-        int count = 0;
+        int k = 0;
+        Node* current = storage->first;
 
-        Node* current = storage.first;
+        while (current != NULL && current->next != NULL) {
+            size_t currentLength = strlen(current->value);
+            size_t nextLength = strlen(current->next->value);
 
-        while (current != NULL) {
-            pthread_mutex_lock(&current->sync);
-            Node* next = current->next;
-            if (next != NULL && strlen(current->value) > strlen(next->value)) {
-                count++;
+            if (currentLength < nextLength) {
+                k++;
             }
-            pthread_mutex_unlock(&current->sync);
-            current = next;
+
+            current = current->next;
         }
+        ascending_counter++;
 
-        // Increment global variable or perform other actions as needed
-        ascendingCounter.count++;
-
-        // Sleep or other synchronization mechanism may be required
-        sleep(1);
+        // printf("ascending_counter = %d\n", ascending_counter);
+        // printf("k = %d\n", k);
     }
 
     return NULL;
 }
 
-void* equalLengthCount(void* args) {
-    Storage* storage = (Storage *) args
+void* descending_length_count(void* arg) {
+    Storage* storage = (Storage *) arg;
 
     while (1) {
         int k = 0;
-        pthread_mutex_lock(&equalCounter.sync);
-
-        Node* current = storage.first;
+        Node* current = storage->first;
 
         while (current != NULL && current->next != NULL) {
-            pthread_mutex_lock(&current->sync);
-            pthread_mutex_lock(&current->next->sync);
+            size_t currentLength = strlen(current->value);
+            size_t nextLength = strlen(current->next->value);
+
+            if (currentLength > nextLength) {
+                k++;
+            }
+
+            current = current->next;
+        }
+        descending_counter++;
+
+        // printf("descending_counter = %d\n", descending_counter);
+        // printf("k = %d\n", k);
+    }
+
+    return NULL;
+}
+
+void* equal_length_сount(void* arg) {
+    Storage* storage = (Storage *) arg;
+
+    while (1) {
+        int k = 0;
+
+        Node* current = storage->first;
+
+        while (current != NULL && current->next != NULL) {
 
             size_t currentLength = strlen(current->value);
             size_t nextLength = strlen(current->next->value);
@@ -56,15 +77,22 @@ void* equalLengthCount(void* args) {
                 k++;
             }
 
-            pthread_mutex_unlock(&current->sync);
-            pthread_mutex_unlock(&current->next->sync);
-
             current = current->next;
         }
+        equal_counter++;
 
-        equalCounter.count++;
+        // printf("equal_counter = %d\n", equal_counter);
+        // printf("k = %d\n", k);
+    }
 
-        pthread_mutex_unlock(&equalCounter.sync);
+    return NULL;
+}
+
+void *count_monitor(void *arg) {
+    while (1) {
+        printf("Ascending: %d, Descending: %d, Equal: %d\n", 
+                    ascending_counter, descending_counter, equal_counter);
+        sleep(1);
     }
 
     return NULL;
@@ -72,37 +100,52 @@ void* equalLengthCount(void* args) {
 
 int main() {
     Storage* storage = storage_init();
+    int err;
 
-    // Example: Adding strings to the storage
     storage_add(storage, "Hello");
     storage_add(storage, "World");
-    // Add more strings as needed
+    fill_storage(storage, 1000);
+    print_storage(storage);
 
-    // Create and launch three threads using pthread_create
-    pthread_t thread1, thread2, thread3;
-    int iteration_count1 = 0, iteration_count2 = 0, iteration_count3 = 0;
+    //sleep(15);
+    pthread_t monitor;
+    pthread_t equal_thread, ascending_thread, descending_thread;
 
-    ThreadData thread_data1 = {storage, &iteration_count1};
-    ThreadData thread_data2 = {storage, &iteration_count2};
-    ThreadData thread_data3 = {storage, &iteration_count3};
+    err = pthread_create(&equal_thread, NULL, equal_length_сount, storage);
+	if (err) {
+		printf("main: pthread_create() failed: %s\n", strerror(err));
+		return -1;
+	}
+	err = pthread_create(&ascending_thread, NULL, ascending_length_count, storage);
+	if (err) {
+		printf("main: pthread_create() failed: %s\n", strerror(err));
+		return -1;
+	}
+    err = pthread_create(&descending_thread, NULL, descending_length_count, storage);
+	if (err) {
+		printf("main: pthread_create() failed: %s\n", strerror(err));
+		return -1;
+	}
 
-    pthread_create(&thread1, NULL, thread_function, &thread_data1);
-    pthread_create(&thread2, NULL, thread_function, &thread_data2);
-    pthread_create(&thread3, NULL, thread_function, &thread_data3);
+    err = pthread_create(&monitor, NULL, count_monitor, NULL);
+	if (err) {
+		printf("main: pthread_create() failed: %s\n", strerror(err));
+		return -1;
+	}
 
-    // Sleep or join threads as needed
-    sleep(5); // Run for 5 seconds, for example
+	if (pthread_join(equal_thread, NULL)) {
+		perror("pthread_join - equal_thread");
+	}
+	if (pthread_join(ascending_thread, NULL)) {
+		perror("pthread_join - ascending_thread");
+	}
+    if (pthread_join(descending_thread, NULL)) {
+		perror("pthread_join - descending_thread");
+	}
+    if (pthread_join(monitor, NULL)) {
+		perror("pthread_join - monitor");
+	}
 
-    // Cleanup and join threads
-    pthread_cancel(thread1);
-    pthread_cancel(thread2);
-    pthread_cancel(thread3);
-
-    pthread_join(thread1, NULL);
-    pthread_join(thread2, NULL);
-    pthread_join(thread3, NULL);
-
-    // Cleanup storage
     storage_destroy(storage);
 
     return 0;
