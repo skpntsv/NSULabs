@@ -13,10 +13,8 @@ struct my_mutex {
     int lock;
 };
 
-static int my_futex(int *uaddr, int futex_op, int val,
-        const struct timespec *timeout, int *auddr2, int val3) {
-            return syscall(SYS_futex, uaddr, futex_op, val, timeout,
-            uaddr, val3);
+int futex(atomic_flag *uaddr, int futex_op, int val) {
+    return syscall(SYS_futex, uaddr, futex_op, val, NULL, NULL, 0);
 }
 
 void my_mutex_init(my_mutex_t *m) {
@@ -33,7 +31,7 @@ void my_mutex_lock(my_mutex_t *m) {
             break;
         }
 
-        err = my_futex(&m->lock, FUTEX_WAIT, 0, NULL, NULL, 0);
+        err = my_futex(&m->lock, FUTEX_WAIT, 0);
         if (err == -1 && errno != EAGAIN) {
             printf("futex FUTEX_WAIT failed: %s\n", strerror(errno));
             abort();
