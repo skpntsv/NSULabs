@@ -2,12 +2,15 @@
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 
-#include "linkedlist.h"
+#include "../linkedlist/linkedlist.h"
 
 int ascending_counter = 0;
 int descending_counter = 0;
 int equal_counter = 0;
+
+int swap_counter = 0;
 
 void* ascending_length_count(void* arg) {
     Storage* storage = (Storage *) arg;
@@ -16,13 +19,19 @@ void* ascending_length_count(void* arg) {
         int k = 0;
         Node* current = storage->first;
 
-        while (current != NULL && current->next != NULL) {
-            size_t currentLength = strlen(current->value);
-            size_t nextLength = strlen(current->next->value);
+        while (current != NULL) {
+            pthread_mutex_lock(&current->sync);
+            if (current->next != NULL) {
+                pthread_mutex_lock(&current->next->sync);
+                size_t currentLength = strlen(current->value);
+                size_t nextLength = strlen(current->next->value);
 
-            if (currentLength < nextLength) {
-                k++;
+                if (currentLength < nextLength) {
+                    k++;
+                }
+                pthread_mutex_unlock(&current->next->sync);
             }
+            pthread_mutex_unlock(&current->sync);
 
             current = current->next;
         }
@@ -42,13 +51,19 @@ void* descending_length_count(void* arg) {
         int k = 0;
         Node* current = storage->first;
 
-        while (current != NULL && current->next != NULL) {
-            size_t currentLength = strlen(current->value);
-            size_t nextLength = strlen(current->next->value);
+        while (current != NULL) {
+            pthread_mutex_lock(&current->sync);
+            if (current->next != NULL) {
+                pthread_mutex_lock(&current->next->sync);
+                size_t currentLength = strlen(current->value);
+                size_t nextLength = strlen(current->next->value);
 
-            if (currentLength > nextLength) {
-                k++;
+                if (currentLength > nextLength) {
+                    k++;
+                }
+                pthread_mutex_unlock(&current->next->sync);
             }
+            pthread_mutex_unlock(&current->sync);
 
             current = current->next;
         }
@@ -69,14 +84,19 @@ void* equal_length_count(void* arg) {
 
         Node* current = storage->first;
 
-        while (current != NULL && current->next != NULL) {
+        while (current != NULL) {
+            pthread_mutex_lock(&current->sync);
+            if (current->next != NULL) {
+                pthread_mutex_lock(&current->next->sync);
+                size_t currentLength = strlen(current->value);
+                size_t nextLength = strlen(current->next->value);
 
-            size_t currentLength = strlen(current->value);
-            size_t nextLength = strlen(current->next->value);
-
-            if (currentLength == nextLength) {
-                k++;
+                if (currentLength == nextLength) {
+                    k++;
+                }
+                pthread_mutex_unlock(&current->next->sync);
             }
+            pthread_mutex_unlock(&current->sync);
 
             current = current->next;
         }
@@ -89,33 +109,58 @@ void* equal_length_count(void* arg) {
     return NULL;
 }
 
+void shuffle(Node* n) {
+    Node* tmp1 = n->next;
+    Node* tmp2 = tmp1->next;
+
+    tmp1->next = tmp2->next;
+    tmp2->next = tmp1;
+    n->next = tmp2;
+}
+
 void* random_swap(void* arg) {
     Storage* storage = (Storage *) arg;
-
-    while (1) {
-        Node* prev = storage->first;
-        Node* current = prev->next;
-        Node* next = current->next;
-
-        while (next != NULL) {
+	
+	while (1) {
+		int cnt = 0;
+		Node* prev = storage->first;
+		pthread_mutex_lock(&prev->sync);
+		Node* current = prev->next;
+		pthread_mutex_lock(&current->sync);
+		while (current->next != NULL) {
+			Node* next = current->next;
+			pthread_mutex_lock(&next->sync);
             unsigned int seed = (unsigned int)pthread_self();
             if (rand_r(&seed) % 2 == 0) {
-                swap_nodes(prev, current, next);
-            }
+                Node* tmp1 = current;
+                Node* tmp2 = next;
 
-            prev = prev->next;
-            current = prev->next;
-            next = (current != NULL) ? current->next : NULL;
-        }
-    }
+                tmp1->next = tmp2->next;
+                tmp2->next = tmp1;
+                prev->next = tmp2;
+
+				cnt++;
+				pthread_mutex_unlock(&prev->sync);
+				prev = next;
+			}
+			else {
+				pthread_mutex_unlock(&prev->sync);
+				prev = current;
+				current = next;
+			}
+		}
+		pthread_mutex_unlock(&prev->sync);
+		pthread_mutex_unlock(&current->sync);
+		swap_counter++;
+	}
 
     return NULL;
 }
 
 void *count_monitor(void *arg) {
     while (1) {
-        printf("Ascending: %d, Descending: %d, Equal: %d\n", 
-                    ascending_counter, descending_counter, equal_counter);
+        printf("Ascending: %d, Descending: %d, Equal: %d Swap: %d\n", 
+                    ascending_counter, descending_counter, equal_counter, swap_counter);
         sleep(1);
     }
 
@@ -137,7 +182,7 @@ int main() {
     storage_add(storage, "Hello");
     storage_add(storage, "World");
     fill_storage(storage, 1000);
-    storage_print(storage);
+    //storage_print(storage);
 
     pthread_t monitor;
     pthread_t equal_thread, ascending_thread, descending_thread;
@@ -200,9 +245,9 @@ int main() {
 		perror("pthread_join - monitor");
 	}
 
-    pthread_join(swap1, NULL);
-    pthread_join(swap2, NULL);
-    pthread_join(swap3, NULL);
+    // pthread_join(swap1, NULL);
+    // pthread_join(swap2, NULL);
+    // pthread_join(swap3, NULL);
 
     storage_destroy(storage);
 
