@@ -109,20 +109,11 @@ void* equal_length_count(void* arg) {
     return NULL;
 }
 
-void shuffle(Node* n) {
-    Node* tmp1 = n->next;
-    Node* tmp2 = tmp1->next;
-
-    tmp1->next = tmp2->next;
-    tmp2->next = tmp1;
-    n->next = tmp2;
-}
-
 void* random_swap(void* arg) {
     Storage* storage = (Storage *) arg;
 	
 	while (1) {
-		int cnt = 0;
+		int k = 0;
 		Node* prev = storage->first;
 		pthread_spin_lock(&prev->sync);
 		Node* current = prev->next;
@@ -139,7 +130,7 @@ void* random_swap(void* arg) {
                 tmp2->next = tmp1;
                 prev->next = tmp2;
 
-				cnt++;
+				k++;
 				pthread_spin_unlock(&prev->sync);
 				prev = next;
 			}
