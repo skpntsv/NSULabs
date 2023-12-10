@@ -6,15 +6,17 @@
 #include <linux/futex.h>
 #include <sys/syscall.h>
 
-typedef struct {
-    int lock;
-} spinlock_t;
+#include "my_spinlock.h"
 
-void spinlock_init(spinlock_t *s) {
+struct my_spinlock {
+    int lock;
+};
+
+void my_spinlock_init(my_spinlock_t *s) {
     s->lock = 1;
 }
 
-void spinlock_lock(spinlock_t *s) {
+void my_spinlock_lock(my_spinlock_t *s) {
     while (1) {
         int one = 1;
 
@@ -24,7 +26,7 @@ void spinlock_lock(spinlock_t *s) {
     }
 }
 
-void spinlock_unlock(spinlock_t *s) {
+void my_spinlock_unlock(my_spinlock_t *s) {
     const int zero = 0;
     atomic_compare_exchange_strong(&s->lock, &zero, 1);
 }
