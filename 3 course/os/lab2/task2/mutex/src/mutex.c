@@ -245,9 +245,9 @@ int main() {
 		perror("pthread_join - monitor");
 	}
 
-    // pthread_join(swap1, NULL);
-    // pthread_join(swap2, NULL);
-    // pthread_join(swap3, NULL);
+    pthread_join(swap1, NULL);
+    pthread_join(swap2, NULL);
+    pthread_join(swap3, NULL);
 
     storage_destroy(storage);
 

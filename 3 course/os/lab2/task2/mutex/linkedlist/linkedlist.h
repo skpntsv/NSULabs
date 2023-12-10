@@ -17,11 +17,6 @@ typedef struct _Storage {
     Node* first;
 } Storage;
 
-typedef struct _Counter {
-    int count;
-    pthread_mutex_t sync;
-} Counter;
-
 Storage* storage_init();
 void storage_add(Storage* storage, const char* value);
 void storage_print(Storage* storage);
