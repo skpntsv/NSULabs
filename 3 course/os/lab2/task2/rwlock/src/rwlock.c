@@ -15,12 +15,11 @@ int swap_counter = 0;
 void* ascending_length_count(void* arg) {
     Storage* storage = (Storage *) arg;
 
-    while (1) {
+    while (1) {     // ну вроде работает // TODO проверить работоспособность и применить ко всем остальным файлам и функциям
         int k = 0;
         Node* current = storage->first;
-
-        while (current != NULL) {
-            pthread_rwlock_rdlock(&current->sync);
+        pthread_rwlock_rdlock(&current->sync);
+        while (current->next != NULL) {
             if (current->next != NULL) {
                 pthread_rwlock_rdlock(&current->next->sync);
                 size_t currentLength = strlen(current->value);
@@ -29,16 +28,15 @@ void* ascending_length_count(void* arg) {
                 if (currentLength < nextLength) {
                     k++;
                 }
-                pthread_rwlock_unlock(&current->next->sync);
+                Node *prev = current;
+                current = current->next;
+                pthread_rwlock_unlock(&prev->sync);
             }
-            pthread_rwlock_unlock(&current->sync);
-
-            current = current->next;
         }
+        pthread_rwlock_unlock(&current->sync);
         ascending_counter++;
 
-        // printf("ascending_counter = %d\n", ascending_counter);
-        // printf("k = %d\n", k);
+        printf("ASC: %d\n", ascending_counter);
     }
 
     return NULL;
@@ -69,8 +67,7 @@ void* descending_length_count(void* arg) {
         }
         descending_counter++;
 
-        // printf("descending_counter = %d\n", descending_counter);
-        // printf("k = %d\n", k);
+        printf("DESC: %d\n", descending_counter);
     }
 
     return NULL;
@@ -94,16 +91,15 @@ void* equal_length_count(void* arg) {
                 if (currentLength == nextLength) {
                     k++;
                 }
-                pthread_rwlock_unlock(&current->next->sync);
+                pthread_rwlock_unlock(&current->sync);
             }
             pthread_rwlock_unlock(&current->sync);
 
-            current = current->next;
+            current = current->next;    // защитить
         }
         equal_counter++;
 
-        // printf("equal_counter = %d\n", equal_counter);
-        // printf("k = %d\n", k);
+        printf("EQUAL: %d\n", equal_counter);
     }
 
     return NULL;
@@ -143,6 +139,8 @@ void* random_swap(void* arg) {
 		pthread_rwlock_unlock(&prev->sync);
 		pthread_rwlock_unlock(&current->sync);
 		swap_counter++;
+
+        printf("SWAP: %d k = %d\n", swap_counter, k);
 	}
 
     return NULL;
@@ -172,7 +170,7 @@ int main() {
 
     storage_add(storage, "Hello");
     storage_add(storage, "World");
-    fill_storage(storage, 1000);
+    fill_storage(storage, 10000);
     //storage_print(storage);
 
     pthread_t monitor;
@@ -197,11 +195,11 @@ int main() {
 		return -1;
 	}
 
-    err = pthread_create(&monitor, NULL, count_monitor, NULL);
-	if (err) {
-		printf("main: pthread_create() failed: %s\n", strerror(err));
-		return -1;
-	}
+    // err = pthread_create(&monitor, NULL, count_monitor, NULL);
+	// if (err) {
+	// 	printf("main: pthread_create() failed: %s\n", strerror(err));
+	// 	return -1;
+	// }
     // EQUAULS FUNCTIONS
     // ---------------------------------------------------------------------------
     // SWAP FUNCTIONS
@@ -232,9 +230,9 @@ int main() {
     if (pthread_join(descending_thread, NULL)) {
 		perror("pthread_join - descending_thread");
 	}
-    if (pthread_join(monitor, NULL)) {
-		perror("pthread_join - monitor");
-	}
+    // if (pthread_join(monitor, NULL)) {
+	// 	perror("pthread_join - monitor");
+	// }
 
     pthread_join(swap1, NULL);
     pthread_join(swap2, NULL);
