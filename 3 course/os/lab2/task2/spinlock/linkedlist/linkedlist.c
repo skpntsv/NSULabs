@@ -22,8 +22,8 @@ void storage_add(Storage* storage, const char* value) {
     }
     snprintf(newNode->value, STRING_LENGTH, "%s", value);
 
-	if (pthread_spin_init(&newNode->sync, 0) != 0) {
-		perror("pthread_spinlock_init");
+	if (pthread_spin_init(&newNode->sync, PTHREAD_PROCESS_SHARED) != 0) {
+		perror("pthread_spin_init");
 		abort();
 	}
 

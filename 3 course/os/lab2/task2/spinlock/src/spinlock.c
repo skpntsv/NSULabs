@@ -172,7 +172,7 @@ int main() {
 
     storage_add(storage, "Hello");
     storage_add(storage, "World");
-    fill_storage(storage, 1000);
+    fill_storage(storage, 10000);
     //storage_print(storage);
 
     pthread_t monitor;
