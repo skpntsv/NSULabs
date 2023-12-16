@@ -192,11 +192,11 @@ int main() {
 		return -1;
 	}
 
-    // err = pthread_create(&monitor, NULL, count_monitor, NULL);
-	// if (err) {
-	// 	printf("main: pthread_create() failed: %s\n", strerror(err));
-	// 	return -1;
-	// }
+    err = pthread_create(&monitor, NULL, count_monitor, NULL);
+	if (err) {
+		printf("main: pthread_create() failed: %s\n", strerror(err));
+		return -1;
+	}
     // EQUAULS FUNCTIONS
     // ---------------------------------------------------------------------------
     // SWAP FUNCTIONS
@@ -227,9 +227,9 @@ int main() {
     if (pthread_join(descending_thread, NULL)) {
 		perror("pthread_join - descending_thread");
 	}
-    // if (pthread_join(monitor, NULL)) {
-	// 	perror("pthread_join - monitor");
-	// }
+    if (pthread_join(monitor, NULL)) {
+		perror("pthread_join - monitor");
+	}
 
     pthread_join(swap1, NULL);
     pthread_join(swap2, NULL);

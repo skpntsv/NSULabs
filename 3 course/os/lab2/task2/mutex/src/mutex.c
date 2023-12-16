@@ -15,12 +15,11 @@ int swap_counter = 0;
 void* ascending_length_count(void* arg) {
     Storage* storage = (Storage *) arg;
 
-    while (1) {
+    while (1) { 
         int k = 0;
         Node* current = storage->first;
-
-        while (current != NULL) {
-            pthread_mutex_lock(&current->sync);
+        pthread_mutex_lock(&current->sync);
+        while (current->next != NULL) {
             if (current->next != NULL) {
                 pthread_mutex_lock(&current->next->sync);
                 size_t currentLength = strlen(current->value);
@@ -29,16 +28,15 @@ void* ascending_length_count(void* arg) {
                 if (currentLength < nextLength) {
                     k++;
                 }
-                pthread_mutex_unlock(&current->next->sync);
+                Node *prev = current;
+                current = current->next;
+                pthread_mutex_unlock(&prev->sync);
             }
-            pthread_mutex_unlock(&current->sync);
-
-            current = current->next;
         }
+        pthread_mutex_unlock(&current->sync);
         ascending_counter++;
 
-        // printf("ascending_counter = %d\n", ascending_counter);
-        // printf("k = %d\n", k);
+        printf("ASC: %d, k = %d\n", ascending_counter, k);
     }
 
     return NULL;
@@ -50,9 +48,8 @@ void* descending_length_count(void* arg) {
     while (1) {
         int k = 0;
         Node* current = storage->first;
-
-        while (current != NULL) {
-            pthread_mutex_lock(&current->sync);
+        pthread_mutex_lock(&current->sync);
+        while (current->next != NULL) {
             if (current->next != NULL) {
                 pthread_mutex_lock(&current->next->sync);
                 size_t currentLength = strlen(current->value);
@@ -61,16 +58,15 @@ void* descending_length_count(void* arg) {
                 if (currentLength > nextLength) {
                     k++;
                 }
-                pthread_mutex_unlock(&current->next->sync);
+                Node *prev = current;
+                current = current->next;
+                pthread_mutex_unlock(&prev->sync);
             }
-            pthread_mutex_unlock(&current->sync);
-
-            current = current->next;
         }
+        pthread_mutex_unlock(&current->sync);
         descending_counter++;
 
-        // printf("descending_counter = %d\n", descending_counter);
-        // printf("k = %d\n", k);
+        printf("DESC: %d, k = %d\n", descending_counter, k);
     }
 
     return NULL;
@@ -81,11 +77,9 @@ void* equal_length_count(void* arg) {
 
     while (1) {
         int k = 0;
-
         Node* current = storage->first;
-
-        while (current != NULL) {
-            pthread_mutex_lock(&current->sync);
+        pthread_mutex_lock(&current->sync);
+        while (current->next != NULL) {
             if (current->next != NULL) {
                 pthread_mutex_lock(&current->next->sync);
                 size_t currentLength = strlen(current->value);
@@ -94,16 +88,15 @@ void* equal_length_count(void* arg) {
                 if (currentLength == nextLength) {
                     k++;
                 }
-                pthread_mutex_unlock(&current->next->sync);
+                Node *prev = current;
+                current = current->next;
+                pthread_mutex_unlock(&prev->sync);
             }
-            pthread_mutex_unlock(&current->sync);
-
-            current = current->next;
         }
+        pthread_mutex_unlock(&current->sync);
         equal_counter++;
 
-        // printf("equal_counter = %d\n", equal_counter);
-        // printf("k = %d\n", k);
+        printf("EQUALS: %d, k = %d\n", equal_counter, k);
     }
 
     return NULL;
@@ -143,6 +136,8 @@ void* random_swap(void* arg) {
 		pthread_mutex_unlock(&prev->sync);
 		pthread_mutex_unlock(&current->sync);
 		swap_counter++;
+
+        printf("SWAP: %d k = %d\n", swap_counter, k);
 	}
 
     return NULL;
