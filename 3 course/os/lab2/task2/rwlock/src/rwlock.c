@@ -105,15 +105,23 @@ void* equal_length_count(void* arg) {
 void* random_swap(void* arg) {
     Storage* storage = (Storage *) arg;
 	
-	while (1) {
-		int k = 0;
-		Node* prev = storage->first;
-		pthread_rwlock_wrlock(&prev->sync);
-		Node* current = prev->next;
-		pthread_rwlock_wrlock(&current->sync);
-		while (current->next != NULL) {
-			Node* next = current->next;
-			pthread_rwlock_wrlock(&next->sync);
+    while (1) {
+        int k = 0;
+        Node* prev = storage->first;
+        pthread_rwlock_wrlock(&prev->sync);
+        Node* current = prev->next;
+
+        if (current == NULL) {
+            pthread_rwlock_unlock(&prev->sync);
+            continue;
+        }
+
+        pthread_rwlock_wrlock(&current->sync);
+
+        while (current->next != NULL) {
+            Node* next = current->next;
+            pthread_rwlock_wrlock(&next->sync);
+            
             unsigned int seed = (unsigned int)pthread_self();
             if (rand_r(&seed) % 2 == 0) {
                 Node* tmp1 = current;
@@ -123,25 +131,30 @@ void* random_swap(void* arg) {
                 tmp2->next = tmp1;
                 prev->next = tmp2;
 
-				k++;
-				pthread_rwlock_unlock(&prev->sync);
-				prev = next;
-			}
-			else {
-				pthread_rwlock_unlock(&prev->sync);
-				prev = current;
-				current = next;
-			}
-		}
-		pthread_rwlock_unlock(&prev->sync);
-		pthread_rwlock_unlock(&current->sync);
-		swap_counter++;
+                k++;
+                pthread_rwlock_unlock(&prev->sync);
+                prev = next;
+            } else {
+                pthread_rwlock_unlock(&prev->sync);
+                prev = current;
+                current = next;
+            }
+
+        }
+
+        if (current != NULL) {
+            pthread_rwlock_unlock(&current->sync);
+        }
+
+        pthread_rwlock_unlock(&prev->sync);
+        swap_counter++;
 
         printf("SWAP: %d k = %d\n", swap_counter, k);
-	}
+    }
 
     return NULL;
 }
+
 
 void *count_monitor(void *arg) {
     while (1) {
@@ -167,7 +180,7 @@ int main() {
 
     storage_add(storage, "Hello");
     storage_add(storage, "World");
-    fill_storage(storage, 10000);
+    fill_storage(storage, 1);
     //storage_print(storage);
 
     pthread_t monitor;

@@ -105,15 +105,23 @@ void* equal_length_count(void* arg) {
 void* random_swap(void* arg) {
     Storage* storage = (Storage *) arg;
 	
-	while (1) {
-		int k = 0;
-		Node* prev = storage->first;
-		pthread_spin_lock(&prev->sync);
-		Node* current = prev->next;
-		pthread_spin_lock(&current->sync);
-		while (current->next != NULL) {
-			Node* next = current->next;
-			pthread_spin_lock(&next->sync);
+    while (1) {
+        int k = 0;
+        Node* prev = storage->first;
+        pthread_spin_lock(&prev->sync);
+        Node* current = prev->next;
+
+        if (current == NULL) {
+            pthread_spin_unlock(&prev->sync);
+            continue;
+        }
+
+        pthread_spin_lock(&current->sync);
+
+        while (current->next != NULL) {
+            Node* next = current->next;
+            pthread_spin_lock(&next->sync);
+            
             unsigned int seed = (unsigned int)pthread_self();
             if (rand_r(&seed) % 2 == 0) {
                 Node* tmp1 = current;
@@ -123,22 +131,26 @@ void* random_swap(void* arg) {
                 tmp2->next = tmp1;
                 prev->next = tmp2;
 
-				k++;
-				pthread_spin_unlock(&prev->sync);
-				prev = next;
-			}
-			else {
-				pthread_spin_unlock(&prev->sync);
-				prev = current;
-				current = next;
-			}
-		}
-		pthread_spin_unlock(&prev->sync);
-		pthread_spin_unlock(&current->sync);
-		swap_counter++;
+                k++;
+                pthread_spin_unlock(&prev->sync);
+                prev = next;
+            } else {
+                pthread_spin_unlock(&prev->sync);
+                prev = current;
+                current = next;
+            }
+
+        }
+
+        if (current != NULL) {
+            pthread_spin_unlock(&current->sync);
+        }
+
+        pthread_spin_unlock(&prev->sync);
+        swap_counter++;
 
         printf("SWAP: %d k = %d\n", swap_counter, k);
-	}
+    }
 
     return NULL;
 }
