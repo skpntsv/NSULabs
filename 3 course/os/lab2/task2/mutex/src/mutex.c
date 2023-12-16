@@ -104,6 +104,7 @@ void* equal_length_count(void* arg) {
 
 void* random_swap(void* arg) {
     Storage* storage = (Storage *) arg;
+    unsigned int seed = (unsigned int)pthread_self();
 	
     while (1) {
         int k = 0;
@@ -122,7 +123,6 @@ void* random_swap(void* arg) {
             Node* next = current->next;
             pthread_mutex_lock(&next->sync);
             
-            unsigned int seed = (unsigned int)pthread_self();
             if (rand_r(&seed) % 2 == 0) {
                 Node* tmp1 = current;
                 Node* tmp2 = next;
