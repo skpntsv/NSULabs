@@ -15,7 +15,7 @@ int swap_counter = 0;
 void* ascending_length_count(void* arg) {
     Storage* storage = (Storage *) arg;
 
-    while (1) {     // ну вроде работает // TODO проверить работоспособность и применить ко всем остальным файлам и функциям
+    while (1) { 
         int k = 0;
         Node* current = storage->first;
         pthread_rwlock_rdlock(&current->sync);
@@ -36,7 +36,7 @@ void* ascending_length_count(void* arg) {
         pthread_rwlock_unlock(&current->sync);
         ascending_counter++;
 
-        printf("ASC: %d\n", ascending_counter);
+        printf("ASC: %d, k = %d\n", ascending_counter, k);
     }
 
     return NULL;
@@ -48,9 +48,8 @@ void* descending_length_count(void* arg) {
     while (1) {
         int k = 0;
         Node* current = storage->first;
-
-        while (current != NULL) {
-            pthread_rwlock_rdlock(&current->sync);
+        pthread_rwlock_rdlock(&current->sync);
+        while (current->next != NULL) {
             if (current->next != NULL) {
                 pthread_rwlock_rdlock(&current->next->sync);
                 size_t currentLength = strlen(current->value);
@@ -59,15 +58,15 @@ void* descending_length_count(void* arg) {
                 if (currentLength > nextLength) {
                     k++;
                 }
-                pthread_rwlock_unlock(&current->next->sync);
+                Node *prev = current;
+                current = current->next;
+                pthread_rwlock_unlock(&prev->sync);
             }
-            pthread_rwlock_unlock(&current->sync);
-
-            current = current->next;
         }
+        pthread_rwlock_unlock(&current->sync);
         descending_counter++;
 
-        printf("DESC: %d\n", descending_counter);
+        printf("DESC: %d, k = %d\n", descending_counter, k);
     }
 
     return NULL;
@@ -78,11 +77,9 @@ void* equal_length_count(void* arg) {
 
     while (1) {
         int k = 0;
-
         Node* current = storage->first;
-
-        while (current != NULL) {
-            pthread_rwlock_rdlock(&current->sync);
+        pthread_rwlock_rdlock(&current->sync);
+        while (current->next != NULL) {
             if (current->next != NULL) {
                 pthread_rwlock_rdlock(&current->next->sync);
                 size_t currentLength = strlen(current->value);
@@ -91,15 +88,15 @@ void* equal_length_count(void* arg) {
                 if (currentLength == nextLength) {
                     k++;
                 }
-                pthread_rwlock_unlock(&current->sync);
+                Node *prev = current;
+                current = current->next;
+                pthread_rwlock_unlock(&prev->sync);
             }
-            pthread_rwlock_unlock(&current->sync);
-
-            current = current->next;    // защитить
         }
+        pthread_rwlock_unlock(&current->sync);
         equal_counter++;
 
-        printf("EQUAL: %d\n", equal_counter);
+        printf("EQUALS: %d, k = %d\n", equal_counter, k);
     }
 
     return NULL;
