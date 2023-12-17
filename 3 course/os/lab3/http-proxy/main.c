@@ -28,7 +28,7 @@ typedef struct Cache_t {
     char url[MAX_URL_SIZE];
     char body[MAX_BUFFER_SIZE];
 
-    struct cache *next;
+    struct Cache_t *next;
 } cache;
 
 typedef struct ThreadArgs_t {
@@ -57,13 +57,14 @@ void parse_url(char *url, request *content) {
 }
 
 void* client_handler(void* args) {
-    int client_socket = *(int*) args;
+    threadArgs *thread_args = (threadArgs*)args;
+    int client_socket = thread_args->client_socket;
 
     char buffer[MAX_BUFFER_SIZE];
     
     int bytes_read = receive_request(client_socket, buffer, sizeof(buffer));
     if (bytes_read < 0) {
-        perror("receive_all");
+        perror("receive_request");
         close(client_socket);
 
         return NULL;
@@ -103,21 +104,22 @@ void* client_handler(void* args) {
 }
 
 void start_proxy_server() {
-    int server_socket, client_socket;
+    threadArgs args;
+    int server_socket;
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
 
     init_server_socket(&server_socket, PORT, LISTENQ);
 
     while (1) {
-        client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_len);
-        if (client_socket < 0) {
+        args.client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_len);
+        if (args.client_socket < 0) {
             perror("Error accepting connection");
             continue;
         }
 
         pthread_t thread;
-        pthread_create(&thread, NULL, client_handler, &client_socket);
+        pthread_create(&thread, NULL, client_handler, &args);
         pthread_detach(thread);
     }
 
