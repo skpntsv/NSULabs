@@ -1,4 +1,4 @@
-EXECUTABLES=proxy
+EXECUTABLES=main
 # SOURCES=./src/
 SOURCES=./
 TYPE=.c
@@ -7,7 +7,7 @@ CC=gcc
 RM=rm
 CFLAGS=-Wall
 # LIBS=src/uthreads/uthread.c
-LIBS=
+LIBS=network_utils.c
 LDFLAGS=-o $@
 
 all: $(EXECUTABLES)
