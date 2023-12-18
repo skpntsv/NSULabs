@@ -61,7 +61,7 @@ void* client_handler(void* args) {
     int client_socket = thread_args->client_socket;
 
     char buffer[MAX_BUFFER_SIZE];
-    
+
     int bytes_read = receive_request(client_socket, buffer, sizeof(buffer));
     if (bytes_read < 0) {
         perror("receive_request");
@@ -69,13 +69,17 @@ void* client_handler(void* args) {
 
         return NULL;
     }
-    printf("buffer =\n %s\n", buffer);
+    //printf("buffer =\n %s\n", buffer);
 
-    char method[100], url[MAX_URL_SIZE], version[100];
-    sscanf(buffer, "%s %s %s", method, url, version);
+    char method[100], url[MAX_URL_SIZE], version[MAX_BUFFER_SIZE];
+    sscanf(buffer, "%s %s %s ", method, url, version);
+    printf("Get request: %s %s %s\n", buffer, url, version);
 
     if (strcasecmp(method, "GET")) {
         printf("This proxy doesn't support this method - %s\n", method);
+        close(client_socket);
+
+        return NULL;
     }
 
     request content;
@@ -83,14 +87,17 @@ void* client_handler(void* args) {
     
     // Создаём новый HTTP запрос
     char new_request[MAX_BUFFER_SIZE];
-    // snprintf(new_request, "GET %s HTTP/1.0\n", content.path);
+    sprintf(new_request, "GET %s HTTP/1.0\nHost: %s\n", content.path, content.host);
 
-    // snprintf(new_request, "%sHost: %s\n", new_request, content.host);
+    int website_socket = create_client_socket(content.host, content.port);
 
-    int website_socket = create_socket(content.host, content.port);
-
+    // отправить тот же самый реквест что и пришел нам
     send_request(website_socket, buffer, sizeof(buffer));
     printf("Send request to website:\n %s\n", buffer);
+
+    // отправить самостоятельно созданный реквест
+    // send_request(website_socket, buffer, sizeof(buffer));
+    // printf("Send request to website:\n %s\n", buffer);
 
     char response[MAX_BUFFER_SIZE];
     receive_request(website_socket, response, sizeof(response));
@@ -98,8 +105,12 @@ void* client_handler(void* args) {
 
     close(website_socket);
 
-    send_request(client_socket, response, sizeof(response));
+    size_t response_length = strlen(response);
+    send_request(client_socket, response, response_length);
+    //send(client_socket, response, sizeof(response), NULL);
+    printf("Send request to client:\n%s\n", response);
 
+    close(client_socket);
     return NULL;
 }
 
@@ -118,9 +129,10 @@ void start_proxy_server() {
             continue;
         }
 
-        pthread_t thread;
-        pthread_create(&thread, NULL, client_handler, &args);
-        pthread_detach(thread);
+        // pthread_t thread;
+        // pthread_create(&thread, NULL, client_handler, &args);
+        // pthread_detach(thread);
+        client_handler(&args);
     }
 
     close(server_socket);
