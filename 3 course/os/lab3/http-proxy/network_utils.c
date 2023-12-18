@@ -9,7 +9,7 @@
 
 #include "network_utils.h"
 
-int create_socket(char *hostname, int port) {
+int create_client_socket(char *hostname, int port) {
     int client_socket;
     struct hostent *host_info;
     struct sockaddr_in server_address;
@@ -56,6 +56,7 @@ ssize_t send_request(int fd, void *buffer, size_t n) {
 
         remaining -= sent;
         bufp += sent;
+        
     }
 
     return n;
