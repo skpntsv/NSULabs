@@ -11,5 +11,6 @@ void init_server_socket(int *server_socket, int port, int max_listeners);
 
 http_request *http_read_header(int socket);
 int http_connect(http_request *req);
+char *http_read_body(int sockfd, ssize_t *length, int max_buffer);
 
 #endif

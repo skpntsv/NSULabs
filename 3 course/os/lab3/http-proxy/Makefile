@@ -7,7 +7,7 @@ CC=gcc
 RM=rm
 CFLAGS=-Wall
 # LIBS=src/uthreads/uthread.c
-LIBS=*.c
+LIBS=network_utils.c proxy.c http_message.c	
 LDFLAGS=-o $@
 
 all: $(EXECUTABLES)

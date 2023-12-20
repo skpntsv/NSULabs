@@ -11,11 +11,12 @@
 
 #include "network_utils.h"
 #include "proxy.h"
+#include "http_message.h"
 
 #define PORT 80
 #define LISTENQ 10
 #define MAX_URL_SIZE 256
-#define MAX_BUFFER_SIZE 1024*16
+#define MAX_BUFFER_SIZE 100
 #define CACHE_SIZE 1024*4
 
 typedef struct Request_t {
@@ -38,16 +39,18 @@ typedef struct ThreadArgs_t {
 } threadArgs;
 
 
-char *read_line(int sockfd)
-{
+char *read_line(int sockfd) {
     int buffer_size = 2;
-    char *line = (char*)malloc(sizeof(char)*buffer_size+1);
+    char *line = (char*)malloc(sizeof(char) * buffer_size + 1);
     char c;
-    int length = 0;
+    ssize_t length = 0;
     int counter = 0;
 
     while(1) {
         length = recv(sockfd, &c, 1, 0);
+        if (length == -1) {
+            perror("recv");
+        }
         line[counter++] = c;
 
         if(c == '\n') {
@@ -57,7 +60,7 @@ char *read_line(int sockfd)
 
         if(counter == buffer_size) {
             buffer_size *= 2;
-            line = (char*)realloc(line, sizeof(char)*buffer_size);
+            line = (char*)realloc(line, sizeof(char) * buffer_size);
         }
     }
 
@@ -87,19 +90,19 @@ void parse_url(char *url, request *content) {
 }
 
 int http_request_send(int sockfd, http_request *request) {
-    char **request_buffer = http_build_request(request);
+    char *request_buffer = http_build_request(request);
     if (request_buffer == NULL) {
         printf("new message is null\n");
         return -1;
     }
     printf("%p\n", request_buffer);
     printf("%s\n", request_buffer);
-    // if (send(sockfd, request_buffer, strlen(request_buffer), 0) == -1) {
-    //     free(request_buffer);
-    //     perror("send");
-    //     return 1;
-    // }
-    //free(request_buffer);
+    if (send(sockfd, request_buffer, strlen(request_buffer), 0) == -1) {
+        free(request_buffer);
+        perror("send");
+        return 1;
+    }
+    free(request_buffer);
 
     printf("Sent HTTP header to web server\n");
 
@@ -115,8 +118,7 @@ int send_to_client(int client_sockfd, char data[], int packages_size, ssize_t le
     } else {
         int p;
         for (p = 0; p * packages_size + packages_size < length; p++) {
-            if(send(client_sockfd, (data + p * packages_size), packages_size, 0) == -1)
-            {
+            if(send(client_sockfd, (data + p * packages_size), packages_size, 0) == -1) {
                 perror("Couldn't send any or just some data to the client. (loop)\n");
                 return -1;
             }
@@ -173,59 +175,26 @@ void* client_handler(void* args) {
         free(line);
     }
 
+    while (1) {
+        ssize_t body_length;
+        char *body = http_read_body(website_socket, &body_length, MAX_BUFFER_SIZE);
+        if (body == NULL) {
+            break;  // Прерываем цикл, если достигнут конец тела запроса
+        }
+        printf("Received the content, %d bytes\n", (int)body_length);
+        //printf("SEND BODY:%s\n", body);
+        int err = send_to_client(client_socket, body, 0, body_length);
+        if (err == -1) {
+            printf("Send to client body ended with ERROR\n");
+            free(body);
+            break;  // Прерываем цикл в случае ошибки отправки
+        }
+        free(body);
+    }
 
+    printf("Send to client body was success\n");
 
-    ////////////////////////
-    // char buffer[MAX_BUFFER_SIZE];
-
-    // int bytes_read = receive_request(client_socket, buffer, sizeof(buffer));
-    // if (bytes_read < 0) {
-    //     perror("receive_request");
-    //     close(client_socket);
-
-    //     return NULL;
-    // }
-    // //printf("buffer =\n %s\n", buffer);
-
-    // char method[100], url[MAX_URL_SIZE], version[MAX_BUFFER_SIZE];
-    // sscanf(buffer, "%s %s %s ", method, url, version);
-    // printf("Get request: %s %s %s\n", buffer, url, version);
-
-    // if (strcasecmp(method, "GET")) {
-    //     printf("This proxy doesn't support this method - %s\n", method);
-    //     close(client_socket);
-
-    //     return NULL;
-    // }
-
-    // request content;
-    // parse_url(url, &content);
-    
-    // // Создаём новый HTTP запрос
-    // char new_request[MAX_BUFFER_SIZE];
-    // sprintf(new_request, "GET %s HTTP/1.0\nHost: %s\n", content.path, content.host);
-
-    // int website_socket = create_client_socket(content.host, content.port);
-
-    // // отправить тот же самый реквест что и пришел нам
-    // send_request(website_socket, buffer, sizeof(buffer));
-    // printf("Send request to website:\n %s\n", buffer);
-
-    // // отправить самостоятельно созданный реквест
-    // // send_request(website_socket, buffer, sizeof(buffer));
-    // // printf("Send request to website:\n %s\n", buffer);
-
-    // char response[MAX_BUFFER_SIZE];
-    // receive_request(website_socket, response, sizeof(response));
-    // printf("Get request from website:\n%s\n", response);
-
-    // close(website_socket);
-
-    // size_t response_length = strlen(response);
-    // send_request(client_socket, response, response_length);
-    // //send(client_socket, response, sizeof(response), NULL);
-    // printf("Send request to client:\n%s\n", response);
-
+    close(website_socket);
     close(client_socket);
     return NULL;
 }
