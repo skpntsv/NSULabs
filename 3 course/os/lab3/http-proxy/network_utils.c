@@ -152,33 +152,35 @@ int http_connect(http_request *req) {
         port = calloc(3, sizeof(char));
         strncat(port, "80", 2);
 
-        printf("Использую дефолтный порт 80 для подключения к серверу");
+        printf("Use default port 80 to connect the server\n");
     }
     else {
         host = strtok(host, ":");
         port++;
 
-        printf("Использую порт %s для подключения к серверу", port);
+        printf("Use port %s to connect the server\n", port);
     }
 
     printf("Connecting to HTTP server: %s\n", host);
 
 	if(host == NULL) {
-		printf("Имя хоста потерялось");
+		printf("no host:(");
 		return -1; 
 	}
-    
+
     int website_socket;
     struct hostent *host_info;
     struct sockaddr_in server_address;
 
     if ((website_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Error creating socket");
+        free(port);
         return -1;
     }
 
     if ((host_info = gethostbyname(host)) == NULL) {
         perror("Error getting host by name");
+        free(port);
         close(website_socket);
         return -1;
     }
@@ -186,13 +188,17 @@ int http_connect(http_request *req) {
     memset(&server_address, 0, sizeof(server_address));
     server_address.sin_family = AF_INET;
     memcpy(&server_address.sin_addr.s_addr, host_info->h_addr_list[0], host_info->h_length);
-    server_address.sin_port = htons(port);
+    server_address.sin_port = htons(atoi(port));
 
     if (connect(website_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
         perror("Error connecting to server");
+        free(port);
         close(website_socket);
         return -1;
     }
+
+    free(port);
+    printf("Successfully connected to HTTP server: %s\n", host);
 
 	return website_socket;
 }

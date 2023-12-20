@@ -87,14 +87,19 @@ void parse_url(char *url, request *content) {
 }
 
 int http_request_send(int sockfd, http_request *request) {
-    char *request_buffer = http_build_request(request);
-
-    if(send(sockfd, request_buffer, strlen(request_buffer), 0) == -1) {
-        free(request_buffer);
-        perror("send");
-        return 1;
+    char **request_buffer = http_build_request(request);
+    if (request_buffer == NULL) {
+        printf("new message is null\n");
+        return -1;
     }
-    free(request_buffer);
+    printf("%p\n", request_buffer);
+    printf("%s\n", request_buffer);
+    // if (send(sockfd, request_buffer, strlen(request_buffer), 0) == -1) {
+    //     free(request_buffer);
+    //     perror("send");
+    //     return 1;
+    // }
+    //free(request_buffer);
 
     printf("Sent HTTP header to web server\n");
 
@@ -102,24 +107,23 @@ int http_request_send(int sockfd, http_request *request) {
 }
 
 int send_to_client(int client_sockfd, char data[], int packages_size, ssize_t length) {
-    if(packages_size < 1) {
-        if(send(client_sockfd, data, length, 0) == -1)
-        {
+    if (packages_size < 1) {
+        if(send(client_sockfd, data, length, 0) == -1) {
             perror("Couldn't send data to the client.");
             return -1;
         }
     } else {
         int p;
-        for(p = 0; p*packages_size + packages_size < length; p++) {
-            if(send(client_sockfd, (data + p*packages_size), packages_size, 0) == -1)
+        for (p = 0; p * packages_size + packages_size < length; p++) {
+            if(send(client_sockfd, (data + p * packages_size), packages_size, 0) == -1)
             {
                 perror("Couldn't send any or just some data to the client. (loop)\n");
                 return -1;
             }
         }
 
-        if (p*packages_size < length) {
-            if(send(client_sockfd, (data + p*packages_size), length - p*packages_size, 0) == -1) {
+        if (p * packages_size < length) {
+            if (send(client_sockfd, (data + p * packages_size), length - p * packages_size, 0) == -1) {
                 perror("Couldn't send any or just some data to the client.\n");
                 return -1;
             }
@@ -150,7 +154,6 @@ void* client_handler(void* args) {
         http_request_destroy(request);
         return NULL;
     }
-
     http_request_send(website_socket, request);
     http_request_destroy(request);
     

@@ -7,7 +7,7 @@ CC=gcc
 RM=rm
 CFLAGS=-Wall
 # LIBS=src/uthreads/uthread.c
-LIBS=network_utils.c
+LIBS=*.c
 LDFLAGS=-o $@
 
 all: $(EXECUTABLES)

@@ -156,13 +156,11 @@ void http_parse_metadata(http_request *result, char *line)
 
 
 
-char *http_build_request(http_request *req)
-{
+char *http_build_request(http_request *req) {
     const char *search_path = req->search_path; 
 
-    // construct the http request 
     int size = strlen("GET ") + 1; 
-    //char *request_buffer = calloc(sizeof(char)*size);
+    //char *request_buffer = malloc(sizeof(char) * size);
     char *request_buffer = calloc(size, sizeof(char));
     strncat(request_buffer, "GET ", 4);
 
@@ -170,10 +168,6 @@ char *http_build_request(http_request *req)
     request_buffer = realloc(request_buffer, size);
     strncat(request_buffer, search_path, strlen(search_path));
 
-    // TODO: Check the actual HTTP version that is used, and if 
-    // 1.1 is used we should append:
-    // 	Connection: close 
-    // to the header. 
     switch(req->version)
     {
         case HTTP_VERSION_1_0:
@@ -187,17 +181,13 @@ char *http_build_request(http_request *req)
             strncat(request_buffer, " HTTP/1.1\r\n", strlen(" HTTP/1.1\r\n"));
             break; 
         default: 
-            //LOG(LOG_ERROR, "Failed to retrieve the http version\n");
             return NULL; 
     }
 
     http_metadata_item *item; 
     TAILQ_FOREACH(item, &req->metadata_head, entries) {
-        // Remove Connection properties in header in case
-        // there are any
-        if(strcmp(item->key, "Connection") == 0 || 
-            strcmp(item->key, "Proxy-Connection") == 0)
-        {
+        if (strcmp(item->key, "Connection") == 0 || 
+            strcmp(item->key, "Proxy-Connection") == 0) {
             continue; 
         }
 
@@ -209,17 +199,23 @@ char *http_build_request(http_request *req)
         strncat(request_buffer, "\r\n", 2);
     }
 
-    if(req->version == HTTP_VERSION_1_1)
-    {
+
+    if (req->version == HTTP_VERSION_1_1) {
         size += strlen("Connection: close\r\n");
         request_buffer = realloc(request_buffer, size);
         strncat(request_buffer, "Connection: close\r\n", strlen("Connection: close\r\n"));
     }
 
-
     size += strlen("\r\n");
     request_buffer = realloc(request_buffer, size);
     strncat(request_buffer, "\r\n", 2);
 
-    return request_buffer; 
+    char *buffer = malloc(size);
+    strcpy(buffer, request_buffer);
+
+    printf("%s\n", buffer);
+    printf("%p\n", buffer);
+    printf("%p\n", buffer);
+    
+    return buffer; 
 }
