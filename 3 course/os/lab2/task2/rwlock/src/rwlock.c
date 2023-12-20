@@ -168,8 +168,12 @@ void *count_monitor(void *arg) {
 
 void fill_storage(Storage* storage, int num_nodes) {
     for (int i = 0; i < num_nodes; ++i) {
-        char buff[99];
-        sprintf(buff, "%d", i);
+        int length = rand() % 100 + 1;
+        char buff[101];
+        for (int j = 0; j < length; ++j) {
+            buff[j] = 'A' + rand() % 26;
+        }
+        buff[length] = '\0';
         storage_add(storage, buff);
     }
 }
@@ -178,8 +182,6 @@ int main() {
     Storage* storage = storage_init();
     int err;
 
-    storage_add(storage, "Hello");
-    storage_add(storage, "World");
     fill_storage(storage, 10000);
     //storage_print(storage);
 
