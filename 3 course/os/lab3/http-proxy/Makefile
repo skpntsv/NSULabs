@@ -1,12 +1,10 @@
 EXECUTABLES=main
-# SOURCES=./src/
 SOURCES=./
 TYPE=.c
 
 CC=gcc
 RM=rm
 CFLAGS=-Wall
-# LIBS=src/uthreads/uthread.c
 LIBS=network_utils.c proxy.c http_message.c	
 LDFLAGS=-o $@
 
