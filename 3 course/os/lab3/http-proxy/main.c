@@ -12,7 +12,7 @@
 #define MAX_THREADS 10
 #define PORT 80
 #define LISTENQ 10
-#define DEFAULT_BUFFER_SIZE (1024*16)
+#define DEFAULT_BUFFER_SIZE (1024*8)
 
 typedef struct ThreadArgs_t {
     int client_socket;
@@ -74,7 +74,7 @@ void *client_handler(void *args) {
         free(line);
     }
 
-    printf("Start to send BODY with buffer %d\n", buffer_size);
+    printf("Start to send BODY with buffer %d bytes in package\n", buffer_size);
     while (1) {
         ssize_t body_length;
         char *body = http_read_body(website_socket, &body_length, buffer_size);
