@@ -178,3 +178,62 @@ int http_connect(http_request *req) {
 
 	return website_socket;
 }
+
+int send_to_client(int client_socket, char data[], int packages_size, ssize_t length) {
+    if (length <= 0) {
+        return 0;
+    }
+
+    int bytes_sent;
+    if (packages_size <= 0) {
+        bytes_sent = send(client_socket, data, length, 0);
+    } else {
+        int p;
+        for (p = 0; p * packages_size + packages_size < length; p++) {
+            bytes_sent = send(client_socket, (data + p * packages_size), packages_size, 0);
+            if (bytes_sent == -1) {
+                perror("Couldn't send data to the client (loop)");
+                return -1;
+            }
+        }
+
+        if (p * packages_size < length) {
+            bytes_sent = send(client_socket, (data + p * packages_size), length - p * packages_size, 0);
+        }
+    }
+
+    if (bytes_sent == -1) {
+        perror("Couldn't send data to the client.");
+        return -1;
+    }
+
+    return 0;
+}
+
+char *read_line(int socket) {
+    int buffer_size = 2;
+    char *line = (char*)malloc(sizeof(char) * buffer_size + 1);
+    char c;
+    ssize_t length = 0;
+    int counter = 0;
+
+    while(1) {
+        length = recv(socket, &c, 1, 0);
+        if (length == -1) {
+            perror("recv");
+        }
+        line[counter++] = c;
+
+        if (c == '\n') {
+            line[counter] = '\0';
+            return line;
+        }
+
+        if (counter == buffer_size) {
+            buffer_size *= 2;
+            line = (char*)realloc(line, sizeof(char) * buffer_size);
+        }
+    }
+
+    return NULL;
+}

@@ -5,13 +5,14 @@ TYPE=.c
 CC=gcc
 RM=rm
 CFLAGS=-Wall
-LIBS=network_utils.c proxy.c http_message.c	
+FILES=networks/network_utils.c networks/http_message.c proxy.c
+LIBS=-lpthread
 LDFLAGS=-o $@
 
 all: $(EXECUTABLES)
 
 $(EXECUTABLES): %: $(SOURCES)%$(TYPE)
-	$(CC) $(CFLAGS) $(LDFLAGS) $< ${LIBS}
+	$(CC) $(CFLAGS) $(LDFLAGS) $< ${LIBS} ${FILES}
 
 run: $(EXECUTABLES)
 	./${EXECUTABLES}

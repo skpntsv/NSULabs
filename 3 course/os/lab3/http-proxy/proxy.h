@@ -3,9 +3,6 @@
 
 #include <sys/queue.h>
 
-extern int http_methods_len;
-extern const char *http_methods[];
-
 char *read_line(int socket);
 
 enum http_methods_enum {
@@ -43,5 +40,6 @@ typedef struct http_metadata_item {
 } http_metadata_item;
 
 const char *list_get_key(struct METADATA_HEAD *list, const char *key);
+void list_add_key(struct METADATA_HEAD *list, const char *key, const char *value);
 
 #endif

@@ -5,6 +5,7 @@
 #include <malloc.h>
 
 #include "http_message.h"
+#include "network_utils.h"
 
 int http_methods_len = 9;
 const char *http_methods[] = {
@@ -29,8 +30,7 @@ void http_request_init(http_request **req) {
     TAILQ_INIT(&request->metadata_head);
 }
 
-void http_request_destroy(http_request *req)
-{
+void http_request_destroy(http_request *req) {
     free((char*)req->search_path);
 
     struct http_metadata_item *item;
@@ -41,8 +41,7 @@ void http_request_destroy(http_request *req)
     }
 }
 
-void http_request_print(http_request *req)
-{
+void http_request_print(http_request *req) {
     printf("[HTTP_REQUEST] \n");
 
     switch (req->version) {
@@ -139,13 +138,10 @@ void http_parse_metadata(http_request *result, const char *line) {
 
     free(line_copy);
 
-    // create the http_metadata_item object and
-    // put the data in it
     http_metadata_item *item = malloc(sizeof(*item));
     item->key = key;
     item->value = value;
 
-    // add the new item to the list of metadatas
     TAILQ_INSERT_TAIL(&result->metadata_head, item, entries);
 }
 
@@ -204,4 +200,26 @@ char *http_build_request(http_request *req) {
     strcat(request_buffer, "\r\n");
 
     return request_buffer;
+}
+
+int http_request_send(int socket, http_request *request) {
+    char *request_buffer = http_build_request(request);
+    if (request_buffer == NULL) {
+        printf("new message is null\n");
+        return -1;
+    }
+    printf("%p\n", request_buffer);
+    printf("%s\n", request_buffer);
+
+    int err = send_to_client(socket, request_buffer, 0, strlen(request_buffer));
+    if (err == -1) {
+        free(request_buffer);
+        perror("send");
+        return -1;
+    }
+    free(request_buffer);
+
+    printf("Sent HTTP header to web server\n");
+
+    return 0;
 }
