@@ -27,14 +27,15 @@ typedef struct Cache_t {
 
 typedef struct Map_t {
     Cache* first;
+    Cache* last;
 } Map;
 
 Map* map_init();
-Storage* map_add(Map* map, const char* url);
-Storage* map_find_by_url(Map* map, const char* url);
+Cache* map_add(Map* map, const char* url);
+Cache* map_find_by_url(Map* map, const char* url);
 
 Storage* storage_init();
-void storage_add(Storage* storage, const char* value);
+Node* storage_add(Storage* storage, const char* value, ssize_t length);
 void storage_print(Storage* storage);
 void storage_destroy(Storage* storage);
 

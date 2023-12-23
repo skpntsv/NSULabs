@@ -119,8 +119,7 @@ char *http_read_body(int socket, ssize_t *length, int max_buffer) {
 
 	//printf("Received: %d\n", (int)total_bytes);
 
-	*length = total_bytes; 
-
+	*length = total_bytes;
 	return buf; 
 }
 

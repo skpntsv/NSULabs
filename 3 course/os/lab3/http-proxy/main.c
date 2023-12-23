@@ -28,6 +28,8 @@ void *client_handler(void *args) {
 
     char *line;
     int website_socket;
+    Cache* cache_node = NULL;
+    Storage* cachedResponse = NULL;
 
     http_request *request = http_read_header(client_socket);
     if (request == NULL) {
@@ -44,9 +46,9 @@ void *client_handler(void *args) {
         abort();
     }
     printf("URL: %s\n", url);
+    cache_node = map_find_by_url(cache, url);
 
-    Storage* cachedResponse = map_find_by_url(cache, url);
-    if (cachedResponse == NULL) {
+    if (cache_node == NULL) {
         // В кеше не нашлось данных
         website_socket = http_connect(request);
         if (website_socket == -1) {
@@ -60,10 +62,13 @@ void *client_handler(void *args) {
         http_request_destroy(request);
 
         printf("Start to retrieve the response header\n");
-        cachedResponse = map_add(cache, url);
-        printf("\n\n\n\nURL: %s\n", url);
+        cache_node = map_add(cache, url);
+        pthread_mutex_lock(&cache_node->mutex);
 
+        cachedResponse = cache_node->response;
         int line_length;
+        Node* current = NULL;
+        Node* prev = NULL;
         while (1) {
             line = read_line(website_socket);
             line_length = strlen(line);
@@ -86,30 +91,35 @@ void *client_handler(void *args) {
                 free(line);
                 break;
             }
-            storage_add(cachedResponse, line);
+            current = storage_add(cachedResponse, line, strlen(line));
             free(line);
         }
+        pthread_mutex_unlock(&cache_node->mutex);   // разблокировали хедеры
 
+        pthread_rwlock_wrlock(&current->sync);
         // TODO если пришло не 200 OK?
         printf("Start to send BODY with buffer %d bytes in package\n", buffer_size);
         while (1) {
+            prev = current;
             ssize_t body_length;
             char *body = http_read_body(website_socket, &body_length, buffer_size);
             if (body == NULL) {
                 break;
             }
-
             int err = send_to_client(client_socket, body, 0, body_length);
             if (err == -1) {
                 printf("Send to client body ended with ERROR\n");
                 free(body);
 
+                pthread_rwlock_unlock(&prev->sync);
                 return NULL;
             }
-
-            storage_add(cachedResponse, body);
+            current = storage_add(cachedResponse, body, body_length);
+            pthread_rwlock_wrlock(&current->sync);
+            pthread_rwlock_unlock(&prev->sync);
             free(body);
         }
+        pthread_rwlock_unlock(&prev->sync);
 
         printf("Send to client body was success\n");
 
@@ -117,9 +127,24 @@ void *client_handler(void *args) {
     } else {
         // Нашли в кеше
         printf("Found in cache, start to send it\n");
+        cachedResponse = cache_node->response;
 
-        // TODO отправка из кеша
-        sleep(1000);
+        Node* current = cachedResponse->first;
+        while (current != NULL) {
+            pthread_rwlock_rdlock(&current->sync);
+            int err = send_to_client(client_socket, current->value, 0, strlen(current->value));
+            if (err == -1) {
+                printf("Send to client body ended with ERROR\n");
+                pthread_rwlock_unlock(&current->sync);
+                return NULL;
+            }
+            //printf("from cache: %s\n", current->value);
+
+            pthread_rwlock_unlock(&current->sync);
+            current = current->next;
+        }
+
+        printf("Send to client data from cache success\n");
     }
 
     free(url);

@@ -27,10 +27,10 @@ Storage* storage_init() {
     return storage;
 }
 
-Storage* map_add(Map* map, const char* url) {
+Cache* map_add(Map* map, const char* url) {
     Cache* newCache = (Cache*)malloc(sizeof(Cache));
     if (!newCache) {
-        fprintf(stderr, "malloc in map_add() failed\n");
+        perror("malloc in map_add()");
         abort();
     }
 
@@ -40,10 +40,9 @@ Storage* map_add(Map* map, const char* url) {
         free(newCache);
         abort();
     }
-    printf("\n\n NEWCACHE = %s\n", url);
 
     if (pthread_mutex_init(&newCache->mutex, NULL) != 0) {
-        perror("pthread_rwlock_init");
+        perror("pthread_mutex_init");
         abort();
     }
 
@@ -52,46 +51,62 @@ Storage* map_add(Map* map, const char* url) {
     newCache->next = map->first;
     map->first = newCache;
 
-    return map->first->response;
+    return map->first;
 }
 
-Storage* map_find_by_url(Map* map, const char* url) {
+Cache* map_find_by_url(Map* map, const char* url) {
     Cache* current = map->first;
     while (current != NULL) {
+        pthread_mutex_lock(&current->mutex);
         if (strcmp(current->url, url) == 0) {
-            printf("TRUE\n");
-            printf("TRUE\n");
-            printf("TRUE\n");
-            printf("TRUE\n");
-            return current->response;
+            pthread_mutex_unlock(&current->mutex);
+            return current;
         }
-        printf("\n\nFALSE: URL = %s\n\n", current->url);
+        printf("URL IN CACHE: %s\n", current->url);
+        pthread_mutex_unlock(&current->mutex);
         current = current->next;
     }
     return NULL;
 }
 
-void storage_add(Storage* storage, const char* value) {
+Node* storage_add(Storage* storage, const char* value, ssize_t length) {
     Node* newNode = (Node*)malloc(sizeof(Node));
     if (!newNode) {
         perror("malloc in push()");
         abort();
     }
 
-    newNode->value = strdup(value);
+    newNode->value = (char*)malloc(length);
     if (!newNode->value) {
-        perror("strdup in storage_add()");
+        perror("malloc in storage_add()");
         free(newNode);
         abort();
     }
+
+    memcpy(newNode->value, value, length);
 
     if (pthread_rwlock_init(&newNode->sync, NULL) != 0) {
         perror("pthread_rwlock_init");
         abort();
     }
 
-    newNode->next = storage->first;
-    storage->first = newNode;
+//    newNode->next = storage->first;
+//    storage->first = newNode;
+
+
+    // Добавляем новый элемент в конец списка
+    newNode->next = NULL;
+    if (storage->first == NULL) {
+        storage->first = newNode;
+    } else {
+        Node* current = storage->first;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = newNode;
+    }
+
+    return newNode;
 }
 
 void storage_print(Storage* storage) {
