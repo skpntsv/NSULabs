@@ -1,93 +1,13 @@
-#include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 #include <netdb.h>
 #include <stdlib.h>
 #include <time.h>
 
 #include "network_utils.h"
 #include "http_message.h"
-
-int create_client_socket(char *hostname, int port) {
-    int client_socket;
-    struct hostent *host_info;
-    struct sockaddr_in server_address;
-
-    if ((client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("Error creating socket");
-        return -1;
-    }
-
-    if ((host_info = gethostbyname(hostname)) == NULL) {
-        perror("Error getting host by name");
-        close(client_socket);
-        return -1;
-    }
-
-    memset(&server_address, 0, sizeof(server_address));
-    server_address.sin_family = AF_INET;
-    memcpy(&server_address.sin_addr.s_addr, host_info->h_addr_list[0], host_info->h_length);
-    server_address.sin_port = htons(port);
-
-    if (connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
-        perror("Error connecting to server");
-        close(client_socket);
-        return -1;
-    }
-
-    return client_socket;
-}
-
-ssize_t send_request(int fd, void *buffer, size_t n) {
-    size_t remaining = n;
-    ssize_t sent;
-    char *bufp = buffer;
-
-    while (remaining > 0) {
-        if ((sent = write(fd, bufp, remaining)) <= 0) {
-            if (errno == EINTR) {
-                sent = 0;
-            } else {
-                perror("Error writing to socket");
-                return -1;
-            }
-        }
-
-        remaining -= sent;
-        bufp += sent;
-        
-    }
-
-    return n;
-}
-
-ssize_t receive_request(int fd, void *buffer, size_t n) {
-    size_t remaining = n;
-    ssize_t received = 1;
-    char *bufp = buffer;
-
-    while (remaining > 0) {
-        printf("Прочитано %ld байт\n", received);
-        if ((received = read(fd, bufp, remaining)) < 0) {
-            if (errno == EINTR) {
-                received = 0;
-            } else {
-                perror("Error reading from socket");
-                return -1;
-            }
-        } else if (received == 0) {
-            break; // EOF - конец строки
-        }
-
-        remaining -= received;
-        bufp += received;
-    }
-    printf("Я всё прочитал!");
-    return n - remaining;
-}
 
 void init_server_socket(int *server_socket, int port, int max_listeners) {
     *server_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -197,7 +117,7 @@ char *http_read_body(int socket, ssize_t *length, int max_buffer) {
         return NULL;
     }
 
-	printf("Received: %d\n", (int)total_bytes);
+	//printf("Received: %d\n", (int)total_bytes);
 
 	*length = total_bytes; 
 

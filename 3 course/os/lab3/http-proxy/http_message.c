@@ -3,8 +3,8 @@
 #include <string.h>
 #include <sys/queue.h>
 #include <malloc.h>
-#include "proxy.h"
 
+#include "http_message.h"
 
 int http_methods_len = 9; 
 const char *http_methods[] = {
@@ -19,8 +19,7 @@ const char *http_methods[] = {
     "INVALID"
 }; 
 
-void http_request_init(http_request **req)
-{
+void http_request_init(http_request **req) {
     *req = (http_request*)malloc(sizeof(http_request));
 
     http_request *request = *req; 
@@ -126,18 +125,14 @@ void http_parse_method(http_request* result, const char* line) {
         }
     }
     free(copy);
-    return;
 }
 
-// Content-Byte: 101
-void http_parse_metadata(http_request *result, char *line)
-{
+void http_parse_metadata(http_request *result, const char *line) {
     char *line_copy = strdup(line); 
     char *key = strdup(strtok(line_copy, ":")); 
 
     char *value = strtok(NULL, "\r"); 
 
-    // remove whitespaces :)
     char *p = value; 
     while(*p == ' ') p++; 
     value = strdup(p); 

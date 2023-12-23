@@ -6,7 +6,7 @@
 extern int http_methods_len; 
 extern const char *http_methods[];  
 
-char *read_line(int sockfd); 
+char *read_line(int socket);
 
 enum http_methods_enum {
   OPTIONS,
@@ -35,8 +35,7 @@ typedef struct http_request
   TAILQ_HEAD(METADATA_HEAD, http_metadata_item) metadata_head; 
 } http_request;
 
-typedef struct http_metadata_item
-{ 
+typedef struct http_metadata_item {
   const char *key; 
   const char *value; 
 
