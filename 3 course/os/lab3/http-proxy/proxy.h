@@ -27,7 +27,7 @@ typedef struct http_request
 {
     enum http_methods_enum method;
     enum http_versions_enum version;
-    const char *search_path;
+    char *search_path;
 
     TAILQ_HEAD(METADATA_HEAD, http_metadata_item) metadata_head;
 } http_request;

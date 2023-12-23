@@ -5,7 +5,7 @@ TYPE=.c
 CC=gcc
 RM=rm
 CFLAGS=-Wall
-FILES=networks/network_utils.c networks/http_message.c proxy.c
+FILES=networks/network_utils.c networks/http_message.c cache/linkedlist.c proxy.c
 LIBS=-lpthread
 LDFLAGS=-o $@
 

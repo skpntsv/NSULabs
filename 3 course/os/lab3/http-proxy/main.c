@@ -8,20 +8,22 @@
 #include "networks/network_utils.h"
 #include "proxy.h"
 #include "networks/http_message.h"
+#include "cache/linkedlist.h"
 
 #define MAX_THREADS 10
 #define PORT 80
 #define LISTENQ 10
-#define DEFAULT_BUFFER_SIZE (1024*8)
+#define DEFAULT_BUFFER_SIZE (1024*2)
 
 typedef struct ThreadArgs_t {
     int client_socket;
-    // TODO добавить кэш
+    Map* cache;
 } threadArgs;
 
 void *client_handler(void *args) {
     threadArgs *thread_args = (threadArgs *)args;
     int client_socket = thread_args->client_socket;
+    Map* cache = thread_args->cache;
     int buffer_size = DEFAULT_BUFFER_SIZE;
 
     char *line;
@@ -34,67 +36,93 @@ void *client_handler(void *args) {
         close(client_socket);
         return NULL;
     }
+    // Работаем с КЕШОМ
+    char* url = strdup(request->search_path);
+    if (!url) {
+        perror("strdup in url");
+        free(url);
+        abort();
+    }
+    printf("URL: %s\n", url);
 
-    website_socket = http_connect(request);
-    if (website_socket == -1) {
-        printf("Failed to connect to host\n");
+    Storage* cachedResponse = map_find_by_url(cache, url);
+    if (cachedResponse == NULL) {
+        // В кеше не нашлось данных
+        website_socket = http_connect(request);
+        if (website_socket == -1) {
+            printf("Failed to connect to host\n");
 
+            http_request_destroy(request);
+            close(client_socket);
+            return NULL;
+        }
+        http_request_send(website_socket, request);
         http_request_destroy(request);
-        close(client_socket);
-        return NULL;
-    }
-    http_request_send(website_socket, request);
-    http_request_destroy(request);
 
-    printf("Start to retrieve the response header\n");
-    int line_length;
-    while (1) {
-        line = read_line(website_socket);
-        line_length = strlen(line);
-        int err = send_to_client(client_socket, line, 0, line_length);
-        if (err == -1) {
-            printf("Send to client headers end with ERROR\n");
+        printf("Start to retrieve the response header\n");
+        cachedResponse = map_add(cache, url);
+        printf("\n\n\n\nURL: %s\n", url);
+
+        int line_length;
+        while (1) {
+            line = read_line(website_socket);
+            line_length = strlen(line);
+            int err = send_to_client(client_socket, line, 0, line_length);
+            if (err == -1) {
+                printf("Send to client headers end with ERROR\n");
+                free(line);
+
+                return NULL;
+            }
+
+            if (strstr(line, "Content-Length: ")) {
+                // Adjust buffer size based on Content-Length
+                ssize_t content_length = atoll(line + strlen("Content-Length: "));
+                buffer_size = (content_length < DEFAULT_BUFFER_SIZE) ? content_length : DEFAULT_BUFFER_SIZE;
+            }
+
+            if (line[0] == '\r' && line[1] == '\n') {
+                printf("get the end of the HTTP response header\n");
+                free(line);
+                break;
+            }
+            storage_add(cachedResponse, line);
             free(line);
-
-            return NULL;
         }
 
-        if (strstr(line, "Content-Length: ")) {
-            // Adjust buffer size based on Content-Length
-            ssize_t content_length = atoll(line + strlen("Content-Length: "));
-            buffer_size = (content_length < DEFAULT_BUFFER_SIZE) ? content_length : DEFAULT_BUFFER_SIZE;
-        }
+        // TODO если пришло не 200 OK?
+        printf("Start to send BODY with buffer %d bytes in package\n", buffer_size);
+        while (1) {
+            ssize_t body_length;
+            char *body = http_read_body(website_socket, &body_length, buffer_size);
+            if (body == NULL) {
+                break;
+            }
 
-        if (line[0] == '\r' && line[1] == '\n') {
-            printf("get the end of the HTTP response header\n");
-            free(line);
-            break;
-        }
+            int err = send_to_client(client_socket, body, 0, body_length);
+            if (err == -1) {
+                printf("Send to client body ended with ERROR\n");
+                free(body);
 
-        free(line);
-    }
+                return NULL;
+            }
 
-    printf("Start to send BODY with buffer %d bytes in package\n", buffer_size);
-    while (1) {
-        ssize_t body_length;
-        char *body = http_read_body(website_socket, &body_length, buffer_size);
-        if (body == NULL) {
-            break;
-        }
-
-        int err = send_to_client(client_socket, body, 0, body_length);
-        if (err == -1) {
-            printf("Send to client body ended with ERROR\n");
+            storage_add(cachedResponse, body);
             free(body);
-
-            return NULL;
         }
-        free(body);
+
+        printf("Send to client body was success\n");
+
+        close(website_socket);
+    } else {
+        // Нашли в кеше
+        printf("Found in cache, start to send it\n");
+
+        // TODO отправка из кеша
+        sleep(1000);
     }
 
-    printf("Send to client body was success\n");
-
-    close(website_socket);
+    free(url);
     close(client_socket);
     return NULL;
 }
@@ -103,6 +131,8 @@ void *start_proxy_server(void *arg) {
     int server_socket;
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
+
+    Map* cache = map_init();
 
     init_server_socket(&server_socket, PORT, LISTENQ);
 
@@ -116,6 +146,7 @@ void *start_proxy_server(void *arg) {
 
         threadArgs *args = malloc(sizeof(threadArgs));
         args->client_socket = client_socket;
+        args->cache = cache;
 
         pthread_t thread;
         if (pthread_create(&thread, NULL, client_handler, args) != 0) {
