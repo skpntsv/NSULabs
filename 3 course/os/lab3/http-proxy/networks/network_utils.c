@@ -65,7 +65,7 @@ http_request *http_read_header(int socket) {
 	return request;
 }
 
-unsigned char *http_read_body(int socket, ssize_t *length, int max_buffer) {
+char *http_read_body(int socket, ssize_t *length, int max_buffer) {
     if (length == NULL) {
         printf("ERROR: The length pointer supplied to http_read_chunk is NULL\n");
         return NULL;
@@ -76,7 +76,7 @@ unsigned char *http_read_body(int socket, ssize_t *length, int max_buffer) {
         return NULL;
     }
 
-    unsigned char *buf = (unsigned char*)malloc(max_buffer);
+    char *buf = (char*)malloc(max_buffer);
     if (buf == NULL) {
         perror("malloc in http_read_body");
         return NULL;
@@ -209,10 +209,10 @@ int send_to_client(int client_socket, char data[], int packages_size, ssize_t le
     return 0;
 }
 
-unsigned char *read_line(int socket) {
+char *read_line(int socket) {
     int buffer_size = 2;
-    unsigned char *line = (unsigned char*)malloc(sizeof(unsigned char) * buffer_size + 1);
-    unsigned char c;
+    char *line = (char*)malloc(sizeof(char) * buffer_size + 1);
+    char c;
     ssize_t length = 0;
     int counter = 0;
 
@@ -236,7 +236,7 @@ unsigned char *read_line(int socket) {
 
         if (counter == buffer_size) {
             buffer_size *= 2;
-            line = (unsigned char*)realloc(line, sizeof(unsigned char) * buffer_size);
+            line = (char*)realloc(line, sizeof(char) * buffer_size);
         }
     }
 

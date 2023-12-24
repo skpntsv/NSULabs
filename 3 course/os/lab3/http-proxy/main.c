@@ -27,7 +27,7 @@ void *client_handler(void *args) {
     int buffer_size = DEFAULT_BUFFER_SIZE;
     int k = 0;
 
-    unsigned char *line;
+    char *line;
     int website_socket;
     Cache* cache_node = NULL;
     Storage* cachedResponse = NULL;
@@ -65,6 +65,7 @@ void *client_handler(void *args) {
         printf("Start to retrieve the response header\n");
         cache_node = map_add(cache, url);
         pthread_mutex_lock(&cache_node->mutex);
+        printf("8914789\n");
 
         cachedResponse = cache_node->response;
         int line_length;
@@ -83,6 +84,7 @@ void *client_handler(void *args) {
             if (err == -1) {
                 printf("Send to client headers end with ERROR\n");
                 free(line);
+                pthread_mutex_unlock(&cache_node->mutex);
 
                 return NULL;
             }
@@ -141,7 +143,7 @@ void *client_handler(void *args) {
         while (current != NULL) {
             pthread_rwlock_rdlock(&current->sync);
             k++;
-            int err = send_to_client(client_socket, current->value, 0, strlen(current->value));
+            int err = send_to_client(client_socket, current->value, 0, current->size);
             if (err == -1) {
                 printf("Send to client body ended with ERROR\n");
                 pthread_rwlock_unlock(&current->sync);

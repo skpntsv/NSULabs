@@ -69,14 +69,15 @@ Cache* map_find_by_url(Map* map, const char* url) {
     return NULL;
 }
 
-Node* storage_add(Storage* storage, const unsigned char* value, ssize_t length) {
+Node* storage_add(Storage* storage, const char* value, ssize_t length) {
     Node* newNode = (Node*)malloc(sizeof(Node));
     if (!newNode) {
         perror("malloc in push()");
         abort();
     }
 
-    newNode->value = (unsigned char*)malloc(length + 1);
+    newNode->size = length;
+    newNode->value = (char*)malloc(length);
     if (!newNode->value) {
         perror("malloc in storage_add()");
         free(newNode);
@@ -84,7 +85,7 @@ Node* storage_add(Storage* storage, const unsigned char* value, ssize_t length) 
     }
 
     memcpy(newNode->value, value, length);
-    newNode->value[length] = '\0';      // TODO норм будет в body?
+    newNode->value[++length] = '\0';      // TODO норм будет в body?
     //printf("memcpy dest: %s\n", newNode->value);
     //printf("memcpy src: %s\n", value);
 

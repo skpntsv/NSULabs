@@ -3,7 +3,7 @@
 
 #include <sys/queue.h>
 
-unsigned char *read_line(int socket);
+char *read_line(int socket);
 
 enum http_methods_enum {
     OPTIONS,
