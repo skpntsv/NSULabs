@@ -22,13 +22,14 @@ typedef struct Storage_t {
 typedef struct Cache_t {
     char* url;
     Storage* response;
-    pthread_mutex_t mutex;
 
     struct Cache_t* next;
 } Cache;
 
 typedef struct Map_t {
     Cache* first;
+
+    pthread_mutex_t mutex;
 } Map;
 
 Map* map_init();

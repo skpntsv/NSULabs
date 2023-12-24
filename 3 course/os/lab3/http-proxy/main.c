@@ -54,6 +54,8 @@ void *client_handler(void *args) {
         abort();
     }
     printf("URL: %s\n", url);
+
+    pthread_mutex_lock(&cache->mutex);
     cache_node = map_find_by_url(cache, url);
 
     if (cache_node == NULL) {
@@ -72,7 +74,7 @@ void *client_handler(void *args) {
 
         printf("Start to retrieve the response header\n");
         cache_node = map_add(cache, url);
-        pthread_mutex_lock(&cache_node->mutex);
+
         printf("8914789\n");
 
         cachedResponse = cache_node->response;
@@ -92,7 +94,7 @@ void *client_handler(void *args) {
             if (err == -1) {
                 printf("Send to client headers end with ERROR\n");
                 free(line);
-                pthread_mutex_unlock(&cache_node->mutex);
+                pthread_mutex_unlock(&cache->mutex);
 
                 return NULL;
             }
@@ -109,7 +111,7 @@ void *client_handler(void *args) {
             }
             free(line);
         }
-        pthread_mutex_unlock(&cache_node->mutex);   // разблокировали хедеры
+        pthread_mutex_unlock(&cache->mutex);  // разблокировали хедеры
 
         pthread_rwlock_wrlock(&current->sync);
         // TODO если пришло не 200 OK?
@@ -142,6 +144,7 @@ void *client_handler(void *args) {
 
         close(website_socket);
     } else {
+        pthread_mutex_unlock(&cache->mutex);
         // Нашли в кеше
         printf("Found in cache, start to send it\n");
         cachedResponse = cache_node->response;
@@ -169,7 +172,7 @@ void *client_handler(void *args) {
 
     sem_post(thread_sem);
 
-    printf("K = %d\n", k);
+    //printf("K = %d\n", k);
     free(url);
     close(client_socket);
     return NULL;

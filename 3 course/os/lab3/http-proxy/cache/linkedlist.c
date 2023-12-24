@@ -13,6 +13,11 @@ Map* map_init() {
 
     map->first = NULL;
 
+    if (pthread_mutex_init(&map->mutex, NULL) != 0) {
+        perror("pthread_mutex_init");
+        abort();
+    }
+
     return map;
 }
 
@@ -41,11 +46,6 @@ Cache* map_add(Map* map, const char* url) {
         abort();
     }
 
-    if (pthread_mutex_init(&newCache->mutex, NULL) != 0) {
-        perror("pthread_mutex_init");
-        abort();
-    }
-
     newCache->response = storage_init();
 
     newCache->next = map->first;
@@ -58,13 +58,10 @@ Cache* map_find_by_url(Map* map, const char* url) {
     Cache* current = map->first;
     while (current != NULL) {
         printf("stay in mutex...\n");
-        pthread_mutex_lock(&current->mutex);
         if (strcmp(current->url, url) == 0) {
-            pthread_mutex_unlock(&current->mutex);
             return current;
         }
         printf("URL IN CACHE: %s\n", current->url);
-        pthread_mutex_unlock(&current->mutex);
         current = current->next;
     }
     return NULL;
