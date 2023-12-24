@@ -5,6 +5,10 @@
 #include <pthread.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <signal.h>
+#include <semaphore.h>
+
+
 #include "networks/network_utils.h"
 #include "proxy.h"
 #include "networks/http_message.h"
@@ -18,12 +22,15 @@
 typedef struct ThreadArgs_t {
     int client_socket;
     Map* cache;
+    sem_t *thread_sem;
 } threadArgs;
 
 void *client_handler(void *args) {
     threadArgs *thread_args = (threadArgs *)args;
     int client_socket = thread_args->client_socket;
-    Map* cache = thread_args->cache;
+    Map *cache = thread_args->cache;
+    sem_t *thread_sem = thread_args->thread_sem;
+
     int buffer_size = DEFAULT_BUFFER_SIZE;
     int k = 0;
 
@@ -51,6 +58,7 @@ void *client_handler(void *args) {
 
     if (cache_node == NULL) {
         // В кеше не нашлось данных
+        printf("There is not in cache\n");
         website_socket = http_connect(request);
         if (website_socket == -1) {
             printf("Failed to connect to host\n");
@@ -158,6 +166,9 @@ void *client_handler(void *args) {
 
         printf("Send to client data from cache success\n");
     }
+
+    sem_post(thread_sem);
+
     printf("K = %d\n", k);
     free(url);
     close(client_socket);
@@ -171,6 +182,9 @@ void *start_proxy_server(void *arg) {
 
     Map* cache = map_init();
 
+    sem_t thread_sem;
+    sem_init(&thread_sem, 0, MAX_THREADS);
+
     init_server_socket(&server_socket, PORT, LISTENQ);
 
     while (1) {
@@ -181,13 +195,17 @@ void *start_proxy_server(void *arg) {
             continue;
         }
 
+        sem_wait(&thread_sem);
+
         threadArgs *args = malloc(sizeof(threadArgs));
         args->client_socket = client_socket;
         args->cache = cache;
+        args->thread_sem = &thread_sem;
 
         pthread_t thread;
         if (pthread_create(&thread, NULL, client_handler, args) != 0) {
             perror("Error creating thread");
+            sem_post(&thread_sem);
             free(args);
             close(client_socket);
         } else {
@@ -196,10 +214,12 @@ void *start_proxy_server(void *arg) {
     }
 
     close(server_socket);
+    sem_destroy(&thread_sem);
     return NULL;
 }
 
 int main() {
+    signal(SIGPIPE, SIG_IGN);
     pthread_t server_thread;
 
     if (pthread_create(&server_thread, NULL, start_proxy_server, NULL) != 0) {

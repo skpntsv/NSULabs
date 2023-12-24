@@ -212,6 +212,11 @@ int send_to_client(int client_socket, char data[], int packages_size, ssize_t le
 char *read_line(int socket) {
     int buffer_size = 2;
     char *line = (char*)malloc(sizeof(char) * buffer_size + 1);
+    if (!line) {
+        perror("malloc in read_line()");
+        free(line);
+        abort();
+    }
     char c;
     ssize_t length = 0;
     int counter = 0;
@@ -223,20 +228,21 @@ char *read_line(int socket) {
         }
         line[counter++] = c;
 
-        if (c == '\n') {
-//            for (int i = 0; i <= counter; i++) {
-//                printf("%c ", line[i]);
-//            }
-            //write(1, line, counter);
-            line[counter] = '\0';
-            //write(1, line, counter);
-            //printf("\ncounter = %d, strlen = %d\n", counter, strlen(line));
-            return line;
-        }
-
         if (counter == buffer_size) {
             buffer_size *= 2;
-            line = (char*)realloc(line, sizeof(char) * buffer_size);
+            //printf("line: %s |strlen: %d | buffer_size: %d\n", line, strlen(line), buffer_size);
+            char *temp = (char*)realloc(line, sizeof(char) * buffer_size + 1);
+            if (!temp) {
+                perror("realloc in read_line()");
+                free(line);
+                abort();
+            }
+            line = temp;
+        }
+
+        if (c == '\n') {
+            line[counter] = '\0';
+            return line;
         }
     }
 
