@@ -8,13 +8,14 @@
 #define STRING_LENGTH 1000
 
 typedef struct Node_t {
-    char* value;
+    unsigned char* value;
     struct Node_t* next;
     pthread_rwlock_t sync;
 } Node;
 
 typedef struct Storage_t {
     Node* first;
+    Node* last;
 } Storage;
 
 typedef struct Cache_t {
@@ -27,7 +28,6 @@ typedef struct Cache_t {
 
 typedef struct Map_t {
     Cache* first;
-    Cache* last;
 } Map;
 
 Map* map_init();
@@ -35,7 +35,7 @@ Cache* map_add(Map* map, const char* url);
 Cache* map_find_by_url(Map* map, const char* url);
 
 Storage* storage_init();
-Node* storage_add(Storage* storage, const char* value, ssize_t length);
+Node* storage_add(Storage* storage, const unsigned char* value, ssize_t length);
 void storage_print(Storage* storage);
 void storage_destroy(Storage* storage);
 

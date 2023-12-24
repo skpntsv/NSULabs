@@ -25,8 +25,9 @@ void *client_handler(void *args) {
     int client_socket = thread_args->client_socket;
     Map* cache = thread_args->cache;
     int buffer_size = DEFAULT_BUFFER_SIZE;
+    int k = 0;
 
-    char *line;
+    unsigned char *line;
     int website_socket;
     Cache* cache_node = NULL;
     Storage* cachedResponse = NULL;
@@ -72,6 +73,12 @@ void *client_handler(void *args) {
         while (1) {
             line = read_line(website_socket);
             line_length = strlen(line);
+            //printf("STRLEN() = %d\n", line_length);
+            k++;
+            current = storage_add(cachedResponse, line, line_length);
+            //printf("storage_add: %s\n", current->value);
+
+
             int err = send_to_client(client_socket, line, 0, line_length);
             if (err == -1) {
                 printf("Send to client headers end with ERROR\n");
@@ -81,8 +88,7 @@ void *client_handler(void *args) {
             }
 
             if (strstr(line, "Content-Length: ")) {
-                // Adjust buffer size based on Content-Length
-                ssize_t content_length = atoll(line + strlen("Content-Length: "));
+                size_t content_length = atoll(line + strlen("Content-Length: "));
                 buffer_size = (content_length < DEFAULT_BUFFER_SIZE) ? content_length : DEFAULT_BUFFER_SIZE;
             }
 
@@ -91,7 +97,6 @@ void *client_handler(void *args) {
                 free(line);
                 break;
             }
-            current = storage_add(cachedResponse, line, strlen(line));
             free(line);
         }
         pthread_mutex_unlock(&cache_node->mutex);   // разблокировали хедеры
@@ -114,10 +119,12 @@ void *client_handler(void *args) {
                 pthread_rwlock_unlock(&prev->sync);
                 return NULL;
             }
+            k++;
             current = storage_add(cachedResponse, body, body_length);
             pthread_rwlock_wrlock(&current->sync);
             pthread_rwlock_unlock(&prev->sync);
             free(body);
+            //sleep(2);
         }
         pthread_rwlock_unlock(&prev->sync);
 
@@ -130,8 +137,10 @@ void *client_handler(void *args) {
         cachedResponse = cache_node->response;
 
         Node* current = cachedResponse->first;
+        k = 0;
         while (current != NULL) {
             pthread_rwlock_rdlock(&current->sync);
+            k++;
             int err = send_to_client(client_socket, current->value, 0, strlen(current->value));
             if (err == -1) {
                 printf("Send to client body ended with ERROR\n");
@@ -139,6 +148,7 @@ void *client_handler(void *args) {
                 return NULL;
             }
             //printf("from cache: %s\n", current->value);
+            //sleep(1);
 
             pthread_rwlock_unlock(&current->sync);
             current = current->next;
@@ -146,7 +156,7 @@ void *client_handler(void *args) {
 
         printf("Send to client data from cache success\n");
     }
-
+    printf("K = %d\n", k);
     free(url);
     close(client_socket);
     return NULL;

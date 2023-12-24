@@ -69,14 +69,14 @@ Cache* map_find_by_url(Map* map, const char* url) {
     return NULL;
 }
 
-Node* storage_add(Storage* storage, const char* value, ssize_t length) {
+Node* storage_add(Storage* storage, const unsigned char* value, ssize_t length) {
     Node* newNode = (Node*)malloc(sizeof(Node));
     if (!newNode) {
         perror("malloc in push()");
         abort();
     }
 
-    newNode->value = (char*)malloc(length);
+    newNode->value = (unsigned char*)malloc(length + 1);
     if (!newNode->value) {
         perror("malloc in storage_add()");
         free(newNode);
@@ -84,6 +84,9 @@ Node* storage_add(Storage* storage, const char* value, ssize_t length) {
     }
 
     memcpy(newNode->value, value, length);
+    newNode->value[length] = '\0';      // TODO норм будет в body?
+    //printf("memcpy dest: %s\n", newNode->value);
+    //printf("memcpy src: %s\n", value);
 
     if (pthread_rwlock_init(&newNode->sync, NULL) != 0) {
         perror("pthread_rwlock_init");
@@ -94,16 +97,15 @@ Node* storage_add(Storage* storage, const char* value, ssize_t length) {
 //    storage->first = newNode;
 
 
-    // Добавляем новый элемент в конец списка
     newNode->next = NULL;
+    // Если список пуст, устанавливаем и first, и last на новый узел
     if (storage->first == NULL) {
         storage->first = newNode;
+        storage->last = newNode;
     } else {
-        Node* current = storage->first;
-        while (current->next != NULL) {
-            current = current->next;
-        }
-        current->next = newNode;
+        // Иначе, добавляем новый узел в конец списка
+        storage->last->next = newNode;
+        storage->last = newNode;
     }
 
     return newNode;
