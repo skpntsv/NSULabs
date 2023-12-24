@@ -83,7 +83,7 @@ Node* storage_add(Storage* storage, const char* value, ssize_t length) {
     }
 
     memcpy(newNode->value, value, length);
-    newNode->value[++length] = '\0';      // TODO норм будет в body?
+    newNode->value[++length] = '\0';
     //printf("memcpy dest: %s\n", newNode->value);
     //printf("memcpy src: %s\n", value);
 

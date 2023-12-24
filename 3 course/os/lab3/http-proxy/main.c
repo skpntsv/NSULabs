@@ -75,8 +75,6 @@ void *client_handler(void *args) {
         printf("Start to retrieve the response header\n");
         cache_node = map_add(cache, url);
 
-        printf("8914789\n");
-
         cachedResponse = cache_node->response;
         int line_length;
         Node* current = NULL;
@@ -114,7 +112,6 @@ void *client_handler(void *args) {
         pthread_mutex_unlock(&cache->mutex);  // разблокировали хедеры
 
         pthread_rwlock_wrlock(&current->sync);
-        // TODO если пришло не 200 OK?
         printf("Start to send BODY with buffer %d bytes in package\n", buffer_size);
         while (1) {
             prev = current;

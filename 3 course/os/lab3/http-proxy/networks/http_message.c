@@ -208,8 +208,8 @@ int http_request_send(int socket, http_request *request) {
         printf("new message is null\n");
         return -1;
     }
-    printf("%p\n", request_buffer);
-    printf("%s\n", request_buffer);
+    //printf("%p\n", request_buffer);
+    //printf("%s\n", request_buffer);
 
     int err = send_to_client(socket, request_buffer, 0, strlen(request_buffer));
     if (err == -1) {
