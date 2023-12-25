@@ -145,10 +145,36 @@ void http_parse_metadata(http_request *result, const char *line) {
     TAILQ_INSERT_TAIL(&result->metadata_head, item, entries);
 }
 
+char* extract_uri(const char* search_path) {
+    const char* path_start = strstr(search_path, "//");
+    char* uri;
+    if (path_start) {
+        path_start += 2;
+        path_start = strchr(path_start, '/');
+        if (path_start) {
+            size_t path_length = strlen(path_start);
 
+            uri = (char*)malloc(path_length + 1);
+            if (!uri) {
+                perror("malloc in parse_uri");
+                free(uri);
+                exit(EXIT_FAILURE);
+            }
+            strcpy(uri, path_start);
+        } else {
+            uri = strdup("");
+        }
+    } else {
+        uri = strdup("");
+    }
+
+    return uri;
+}
 
 char *http_build_request(http_request *req) {
     const char *search_path = req->search_path;
+
+    char* uri = extract_uri(search_path);
 
     size_t size = strlen("GET ");
     char *request_buffer = (char*)malloc(size + 1);
@@ -156,7 +182,8 @@ char *http_build_request(http_request *req) {
 
     size += strlen(search_path) + 1;
     request_buffer = (char*)realloc(request_buffer, size);
-    strcat(request_buffer, search_path);
+    strcat(request_buffer, uri);
+    printf("SEARCH PATH: %s\n", request_buffer);
 
     switch (req->version) {
         case HTTP_VERSION_1_0:
