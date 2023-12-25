@@ -76,13 +76,13 @@ char *http_read_body(int socket, ssize_t *length, int max_buffer) {
         return NULL;
     }
 
-    char *buf = (char*)malloc(max_buffer);
+    char *buf = (char*)malloc(max_buffer + 1);
     if (buf == NULL) {
         perror("malloc in http_read_body");
         return NULL;
     }
 
-	memset(buf, '\0', max_buffer);
+	memset(buf, '\0', max_buffer + 1);
 
     time_t timeout = 5; 
     time_t start = time(NULL);
@@ -210,7 +210,7 @@ int send_to_client(int client_socket, char data[], int packages_size, ssize_t le
 }
 
 char *read_line(int socket) {
-    int buffer_size = 2;
+    int buffer_size = 150;
     char *line = (char*)malloc(sizeof(char) * buffer_size + 1);
     if (!line) {
         perror("malloc in read_line()");
@@ -225,10 +225,24 @@ char *read_line(int socket) {
         length = recv(socket, &c, 1, 0);
         if (length == -1) {
             perror("recv");
+        } else if (length == 0) {
+            line[0] = '\r';
+            line[1] = '\n';
+            line[2] = '\0';
+            //printf("0");
+
+            return line;
         }
         line[counter++] = c;
+        //printf("%d\n", line[counter]);
 
-        if (counter == buffer_size) {
+        if (c == '\n') {
+            line[counter] = '\0';
+
+            return line;
+        }
+
+        if (counter == buffer_size - 1) {
             buffer_size *= 2;
             //printf("line: %s |strlen: %d | buffer_size: %d\n", line, strlen(line), buffer_size);
             char *temp = (char*)realloc(line, sizeof(char) * buffer_size + 1);
@@ -238,11 +252,6 @@ char *read_line(int socket) {
                 abort();
             }
             line = temp;
-        }
-
-        if (c == '\n') {
-            line[counter] = '\0';
-            return line;
         }
     }
 

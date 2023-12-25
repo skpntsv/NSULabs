@@ -84,6 +84,7 @@ void *client_handler(void *args) {
             line_length = strlen(line);
             //printf("STRLEN() = %d\n", line_length);
             k++;
+            //  printf("line: %s\n", line);
             current = storage_add(cachedResponse, line, line_length);
             //printf("storage_add: %s\n", current->value);
 
@@ -170,7 +171,7 @@ void *client_handler(void *args) {
     sem_post(thread_sem);
 
     //printf("K = %d\n", k);
-    free(url);
+    //free(url);
     close(client_socket);
     return NULL;
 }

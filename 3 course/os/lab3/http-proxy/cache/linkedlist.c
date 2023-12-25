@@ -57,7 +57,6 @@ Cache* map_add(Map* map, const char* url) {
 Cache* map_find_by_url(Map* map, const char* url) {
     Cache* current = map->first;
     while (current != NULL) {
-        printf("stay in mutex...\n");
         if (strcmp(current->url, url) == 0) {
             return current;
         }
