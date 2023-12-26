@@ -39,12 +39,14 @@ Cache* map_add(Map* map, const char* url) {
         abort();
     }
 
-    newCache->url = strdup(url);
+    size_t length = strlen(url) + 1;
+    newCache->url = (char*)malloc(length);
     if (!newCache->url) {
-        perror("strdup in map_add()");
-        free(newCache);
+        perror("malloc in storage_add()");
         abort();
     }
+    memcpy(newCache->url, url, length);
+    newCache->url[++length] = '\0';
 
     newCache->response = storage_init();
 
@@ -83,17 +85,11 @@ Node* storage_add(Storage* storage, const char* value, ssize_t length) {
 
     memcpy(newNode->value, value, length);
     newNode->value[++length] = '\0';
-    //printf("memcpy dest: %s\n", newNode->value);
-    //printf("memcpy src: %s\n", value);
 
     if (pthread_rwlock_init(&newNode->sync, NULL) != 0) {
         perror("pthread_rwlock_init");
         abort();
     }
-
-//    newNode->next = storage->first;
-//    storage->first = newNode;
-
 
     newNode->next = NULL;
     // Если список пуст, устанавливаем и first, и last на новый узел

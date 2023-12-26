@@ -111,7 +111,7 @@ void http_parse_method(http_request* result, const char* line) {
                 break;
             }
             case VERSION: {
-                if (strncmp(token, "HTTP/1.0", strlen("HTTP/1.0") == 0)) {
+                if (strncmp(token, "HTTP/1.0", strlen("HTTP/1.0")) == 0) {
                     result->version = HTTP_VERSION_1_0;
                 } else if (strncmp(token, "HTTP/1.1", strlen("HTTP/1.1")) == 0) {
                     result->version = HTTP_VERSION_1_1;
@@ -176,7 +176,7 @@ char* extract_uri(const char* search_path) {
     return uri;
 }
 
-char *http_build_request(http_request *req) {
+char *http_build_request(http_request *req, ssize_t *lenght) {
     const char *search_path = req->search_path;
 
     char* uri = extract_uri(search_path);
@@ -202,7 +202,7 @@ char *http_build_request(http_request *req) {
             strcat(request_buffer, " HTTP/1.1\r\n");
             break;
         default:
-            free(request_buffer);  // Освобождаем память перед возвратом NULL
+            free(request_buffer);
             return NULL;
     }
 
@@ -231,11 +231,13 @@ char *http_build_request(http_request *req) {
     request_buffer = (char*)realloc(request_buffer, size);
     strcat(request_buffer, "\r\n");
 
+    *lenght = size;
     return request_buffer;
 }
 
 int http_request_send(int socket, http_request *request) {
-    char *request_buffer = http_build_request(request);
+    ssize_t lenght;
+    char *request_buffer = http_build_request(request, &lenght);
     if (request_buffer == NULL) {
         printf("new message is null\n");
         return -1;
@@ -243,7 +245,7 @@ int http_request_send(int socket, http_request *request) {
     //printf("%p\n", request_buffer);
     //printf("%s\n", request_buffer);
 
-    int err = send_to_client(socket, request_buffer, 0, strlen(request_buffer));
+    int err = send_to_client(socket, request_buffer, 0, lenght);
     if (err == -1) {
         free(request_buffer);
         perror("send");

@@ -85,17 +85,10 @@ char *http_read_body(int socket, ssize_t *length, int max_buffer) {
 
 	memset(buf, '\0', max_buffer + 1);
 
-    time_t timeout = 5; 
-    time_t start = time(NULL);
-
 	ssize_t total_bytes = 0;
     ssize_t num_bytes = 0;
 
 	while (total_bytes < max_buffer) {
-        // if(time(NULL) - start > timeout) {
-        //     printf("Request timed out\n");
-        //     break; 
-        // }
 
 		num_bytes = recv(socket, buf + total_bytes, max_buffer - total_bytes, 0);
         //printf("%d\n", num_bytes);
@@ -179,7 +172,7 @@ int http_connect(http_request *req) {
 	return website_socket;
 }
 
-int send_to_client(int client_socket, char data[], int packages_size, ssize_t length) {
+int send_to_client(int client_socket, char* data, int packages_size, ssize_t length) {
     if (length <= 0) {
         return 0;
     }
@@ -203,7 +196,7 @@ int send_to_client(int client_socket, char data[], int packages_size, ssize_t le
     }
 
     if (bytes_sent == -1) {
-        perror("Couldn't send data to the client.");
+        perror("Couldn't send data to the client");
         return -1;
     }
 
@@ -215,7 +208,6 @@ char *read_line(int socket, ssize_t *lenght) {
     char *line = (char*)malloc(sizeof(char) * buffer_size + 1);
     if (!line) {
         perror("malloc in read_line()");
-        free(line);
         abort();
     }
     char c;
@@ -244,8 +236,8 @@ char *read_line(int socket, ssize_t *lenght) {
             return line;
         }
 
-        if (counter == buffer_size - 1) {
-            buffer_size *= 2;
+        if (counter >= buffer_size) {
+            buffer_size += 1;
             //printf("line: %s |strlen: %d | buffer_size: %d\n", line, strlen(line), buffer_size);
             char *temp = (char*)realloc(line, sizeof(char) * buffer_size + 1);
             if (!temp) {
