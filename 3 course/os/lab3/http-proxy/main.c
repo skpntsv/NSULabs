@@ -46,17 +46,10 @@ void *client_handler(void *args) {
         close(client_socket);
         return NULL;
     }
-    int len = strlen(request->search_path);
-    char* url = strndup(request->search_path, len);
-    if (!url) {
-        perror("strndup in url");
-        free(url);
-        abort();
-    }
-    printf("URL: %s\n", url);
+    printf("URL: %s\n", request->search_path);
 
     pthread_mutex_lock(&cache->mutex);
-    cache_node = map_find_by_url(cache, url);
+    cache_node = map_find_by_url(cache, request->search_path);
 
     if (cache_node == NULL) {
         // В кеше не нашлось данных
@@ -67,13 +60,21 @@ void *client_handler(void *args) {
 
             http_request_destroy(request);
             close(client_socket);
+            pthread_mutex_unlock(&cache->mutex);
+
             return NULL;
         }
-        http_request_send(website_socket, request);
-        http_request_destroy(request);
+        if (http_request_send(website_socket, request) == -1) {
+
+            http_request_destroy(request);
+            close(client_socket);
+            pthread_mutex_unlock(&cache->mutex);
+
+            return NULL;
+        }
 
         printf("Start to retrieve the response header\n");
-        cache_node = map_add(cache, url);
+        cache_node = map_add(cache, request->search_path);
 
         cachedResponse = cache_node->response;
         ssize_t line_length;
@@ -81,6 +82,7 @@ void *client_handler(void *args) {
         Node* prev = NULL;
         //int cont_lenght_size = strlen("Content-Length: ");
         while (1) {
+            line_length = 0;
             line = read_line(website_socket, &line_length);
             //printf("STRLEN() = %d\n", line_length);
             k++;
@@ -171,7 +173,7 @@ void *client_handler(void *args) {
     sem_post(thread_sem);
 
     //printf("K = %d\n", k);
-    free(url);
+    http_request_destroy(request);
     close(client_socket);
     return NULL;
 }
