@@ -48,11 +48,12 @@ http_request *http_read_header(int socket) {
 	http_request_init(&request); 
 
 	char *line; 
-	line = read_line(socket); 
+    ssize_t line_lenght;
+	line = read_line(socket, &line_lenght); 
 	http_parse_method(request, line); 
 
 	while(1) {
-		line = read_line(socket); 
+		line = read_line(socket, &line_lenght); 
 		if(line[0] == '\r' && line[1] == '\n') {
 			break; 
 		}
@@ -209,8 +210,8 @@ int send_to_client(int client_socket, char data[], int packages_size, ssize_t le
     return 0;
 }
 
-char *read_line(int socket) {
-    int buffer_size = 150;
+char *read_line(int socket, ssize_t *lenght) {
+    int buffer_size = 3;
     char *line = (char*)malloc(sizeof(char) * buffer_size + 1);
     if (!line) {
         perror("malloc in read_line()");
@@ -218,19 +219,19 @@ char *read_line(int socket) {
         abort();
     }
     char c;
-    ssize_t length = 0;
+    ssize_t recbytes = 0;
     int counter = 0;
 
     while(1) {
-        length = recv(socket, &c, 1, 0);
-        if (length == -1) {
+        recbytes = recv(socket, &c, 1, 0);
+        if (recbytes == -1) {
             perror("recv");
-        } else if (length == 0) {
+        } else if (recbytes == 0) {
             line[0] = '\r';
             line[1] = '\n';
             line[2] = '\0';
-            //printf("0");
 
+            *lenght = 3;
             return line;
         }
         line[counter++] = c;
@@ -239,6 +240,7 @@ char *read_line(int socket) {
         if (c == '\n') {
             line[counter] = '\0';
 
+            *lenght = counter;
             return line;
         }
 

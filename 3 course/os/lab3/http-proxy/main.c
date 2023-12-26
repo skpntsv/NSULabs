@@ -14,7 +14,7 @@
 #include "networks/http_message.h"
 #include "cache/linkedlist.h"
 
-#define MAX_THREADS 10
+#define MAX_THREADS 1000
 #define PORT 80
 #define LISTENQ 10
 #define DEFAULT_BUFFER_SIZE (1024*2)
@@ -46,10 +46,10 @@ void *client_handler(void *args) {
         close(client_socket);
         return NULL;
     }
-    // Работаем с КЕШОМ
-    char* url = strdup(request->search_path);
+    int len = strlen(request->search_path);
+    char* url = strndup(request->search_path, len);
     if (!url) {
-        perror("strdup in url");
+        perror("strndup in url");
         free(url);
         abort();
     }
@@ -76,12 +76,12 @@ void *client_handler(void *args) {
         cache_node = map_add(cache, url);
 
         cachedResponse = cache_node->response;
-        int line_length;
+        ssize_t line_length;
         Node* current = NULL;
         Node* prev = NULL;
+        //int cont_lenght_size = strlen("Content-Length: ");
         while (1) {
-            line = read_line(website_socket);
-            line_length = strlen(line);
+            line = read_line(website_socket, &line_length);
             //printf("STRLEN() = %d\n", line_length);
             k++;
             //  printf("line: %s\n", line);
@@ -171,7 +171,7 @@ void *client_handler(void *args) {
     sem_post(thread_sem);
 
     //printf("K = %d\n", k);
-    //free(url);
+    free(url);
     close(client_socket);
     return NULL;
 }

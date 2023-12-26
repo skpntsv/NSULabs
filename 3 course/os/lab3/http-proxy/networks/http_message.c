@@ -80,7 +80,8 @@ void http_parse_method(http_request* result, const char* line) {
 
     char* copy;
     char* p;
-    copy = p = strdup(line);
+    int len = strlen(line);
+    copy = p = strndup(line, len);
     char* token = NULL;
     int s = METHOD;
 
@@ -103,15 +104,16 @@ void http_parse_method(http_request* result, const char* line) {
                 s++;
                 break;
             }
-            case URL:
-                result->search_path = strdup(token);
+            case URL: {
+                len = strlen(token);
+                result->search_path = strndup(token, len);
                 s++;
                 break;
-            case VERSION:
-            {
-                if(strcmp(token, "HTTP/1.0") == 0) {
+            }
+            case VERSION: {
+                if (strncmp(token, "HTTP/1.0", strlen("HTTP/1.0") == 0)) {
                     result->version = HTTP_VERSION_1_0;
-                } else if(strcmp(token, "HTTP/1.1") == 0) {
+                } else if (strncmp(token, "HTTP/1.1", strlen("HTTP/1.1")) == 0) {
                     result->version = HTTP_VERSION_1_1;
                 } else {
                     result->version = HTTP_VERSION_INVALID;
@@ -119,8 +121,9 @@ void http_parse_method(http_request* result, const char* line) {
                 s++;
                 break;
             }
-            case DONE:
+            case DONE: {
                 break;
+            }
         }
     }
     free(copy);
@@ -133,7 +136,9 @@ void http_parse_metadata(http_request *result, const char *line) {
     char *value = strtok(NULL, "\r");
 
     char *p = value;
-    while(*p == ' ') p++;
+    while (*p == ' ') {
+        p++;
+    }
     value = strdup(p);
 
     free(line_copy);

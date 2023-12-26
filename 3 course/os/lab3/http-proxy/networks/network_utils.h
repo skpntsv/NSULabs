@@ -10,6 +10,6 @@ http_request *http_read_header(int socket);
 int http_connect(http_request *req);
 char *http_read_body(int sockfd, ssize_t *length, int max_buffer);
 int send_to_client(int client_socket, char data[], int packages_size, ssize_t length);
-char *read_line(int socket);
+char *read_line(int socket, ssize_t *lenght);
 
 #endif
