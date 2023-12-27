@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#define STRING_LENGTH 1000
+//#define STRING_LENGTH 1000
 
 typedef struct Node_t {
     char* value;

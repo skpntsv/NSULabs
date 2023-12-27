@@ -46,6 +46,11 @@ void *client_handler(void *args) {
         close(client_socket);
         return NULL;
     }
+    if (request->search_path == NULL) {
+        close(client_socket);
+
+        return NULL;
+    }
     printf("URL: %s\n", request->search_path);
 
     pthread_mutex_lock(&cache->mutex);

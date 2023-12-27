@@ -81,7 +81,7 @@ void http_parse_method(http_request* result, const char* line) {
     char* copy;
     char* p;
     int len = strlen(line);
-    copy = p = strndup(line, len);
+    copy = p = strdup(line);
     char* token = NULL;
     int s = METHOD;
 
@@ -165,12 +165,13 @@ char* extract_uri(const char* search_path) {
                 free(uri);
                 exit(EXIT_FAILURE);
             }
-            strcpy(uri, path_start);
+            
+            strncpy(uri, path_start, path_length + 1);
         } else {
-            uri = strdup("");
+            uri = strndup("/", 1);
         }
     } else {
-        uri = strdup("");
+        uri = strndup("/", 1);
     }
 
     return uri;

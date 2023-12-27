@@ -49,7 +49,8 @@ http_request *http_read_header(int socket) {
 
 	char *line; 
     ssize_t line_lenght;
-	line = read_line(socket, &line_lenght); 
+	line = read_line(socket, &line_lenght);
+    printf("Header: %s\n", line);
 	http_parse_method(request, line); 
 
 	while(1) {
