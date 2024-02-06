@@ -1,0 +1,145 @@
+import lingo/pegcode/driver;
+import string;
+import math/math;
+
+export {
+    ArExpr ::= ArSum, ArMult, ArSub, ArDiv, ArNeg, ArVar, ArInt;
+
+    ArSum(lhs : ArExpr, rhs : ArExpr);
+    ArMult(lhs : ArExpr, rhs : ArExpr);
+    ArSub(lhs : ArExpr, rhs : ArExpr);
+    ArDiv(lhs : ArExpr, rhs : ArExpr);
+
+    ArNeg(val : ArExpr);
+    ArVar(val : string);
+    ArInt(val : int);
+
+    ratNum : (numerator : int, denominator : int);
+
+    sumRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum>;
+    subRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum>;
+    multRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum>;
+    divRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum>;
+    ratNum2s(rat : Maybe<ratNum>) -> string;
+    calculate(e: ArExpr, vars : Tree<string, ratNum>) -> Maybe<ratNum>;
+    ar2s(e: ArExpr) -> string;
+    parser(str : string) -> ArExpr;
+}
+
+sumRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum> {
+    if (isSome(lhs) && isSome(rhs)) {
+        val1 = either(lhs, ratNum(0, 0));
+        val2 = either(rhs, ratNum(0, 0));
+
+        nok = lcm(val1.denominator, val2.denominator);
+        newNumerator = nok / val1.denominator * val1.numerator + nok / val2.denominator * val2.numerator;
+        newDenominator = nok;
+
+        nod = iabs(gcd(newNumerator, newDenominator));
+        Some(ratNum(newNumerator / nod, newDenominator / nod));
+    } else {
+        None();
+    }
+}
+
+subRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum> {
+    if (isSome(lhs) && isSome(rhs)) {
+        val1 = either(lhs, ratNum(0, 0));
+        val2 = either(rhs, ratNum(0, 0));
+
+        nok = lcm(val1.denominator, val2.denominator);
+        newNumerator = nok / val1.denominator * val1.numerator - nok / val2.denominator * val2.numerator;
+        newDenominator = nok;
+
+        nod = iabs(gcd(newNumerator, newDenominator));
+        Some(ratNum(newNumerator / nod, newDenominator / nod));
+    } else {
+        None();
+    }
+}
+
+multRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum> { // a/b * c/d
+    if (isSome(lhs) && isSome(rhs)) {
+        val1 = either(lhs, ratNum(0, 0));
+        val2 = either(rhs, ratNum(0, 0));
+
+        nodAD = iabs(gcd(val1.numerator, val2.denominator));
+        nodBC = iabs(gcd(val2.numerator, val1.denominator));
+        newNumerator = val1.numerator / nodAD * val2.numerator / nodBC;
+        newDenominator = val1.denominator / nodBC * val2.denominator / nodAD;
+
+        nod = iabs(gcd(newNumerator, newDenominator));
+        Some(ratNum(newNumerator / nod, newDenominator / nod));
+    } else {
+        None();
+    }
+}
+
+divRatNum(lhs : Maybe<ratNum>, rhs : Maybe<ratNum>) -> Maybe<ratNum> { // a/b / c/d
+    if (isSome(lhs) && isSome(rhs)) {
+        val1 = either(lhs, ratNum(0, 0));
+        val2 = either(rhs, ratNum(0, 0));
+
+        nodAC = iabs(gcd(val1.numerator, val2.numerator));
+        nodBD = iabs(gcd(val1.denominator, val2.denominator));
+        newNumerator = val1.numerator / nodAC * val2.denominator / nodBD;
+        newDenominator = val1.denominator / nodBD * val2.numerator / nodAC;
+
+        if (newDenominator == 0) {
+            println("ERROR (Division by zero)");
+            None();
+        } else {
+            nod = iabs(gcd(newNumerator, newDenominator));
+            Some(ratNum(newNumerator / nod, newDenominator / nod));
+        }
+    } else {
+        None();
+    }
+}
+
+ratNum2s(rat : Maybe<ratNum>) -> string {
+    if (isSome(rat)) {
+        newRat = either(rat, ratNum(0, 0));
+        if (newRat.denominator == 0) 
+            "ERROR (Division by zero)"
+        else if (newRat.denominator == 1)
+            i2s(newRat.numerator)
+        else
+            i2s(newRat.numerator) + "/" + i2s(newRat.denominator);
+    } else {
+        "ERROR (What's wrong??????????)";
+    }
+}
+
+calculate(e: ArExpr, vars : Tree<string, ratNum>) -> Maybe<ratNum> {
+    switch (e) {
+        ArSum(lhs, rhs): sumRatNum(calculate(lhs, vars), calculate(rhs, vars));
+        ArMult(lhs, rhs): multRatNum(calculate(lhs, vars), calculate(rhs, vars));
+        ArSub(lhs, rhs): subRatNum(calculate(lhs, vars), calculate(rhs, vars));
+        ArDiv(lhs, rhs): divRatNum(calculate(lhs, vars), calculate(rhs, vars));
+        ArNeg(val): multRatNum(Some(ratNum(-1,1)), calculate(val, vars));
+        ArVar(val): lookupTree(vars, val);
+        ArInt(val): Some(ratNum(val, 1));
+    }
+}
+
+ar2s(e: ArExpr) -> string {
+    switch (e) {
+        ArSum(lhs, rhs): "(" + ar2s(lhs) + "+" + ar2s(rhs) + ")";
+        ArMult(lhs, rhs): "(" + ar2s(lhs) + "*" + ar2s(rhs) + ")";
+        ArSub(lhs, rhs): "(" + ar2s(lhs) + "-" + ar2s(rhs) + ")";
+        ArDiv(lhs, rhs): "(" + ar2s(lhs) + "/" + ar2s(rhs) + ")";
+        ArNeg(val): "(-" + ar2s(val) + ")";
+        ArVar(val): val;
+        ArInt(val): i2s(val);
+    }
+}
+
+parser(str : string) -> ArExpr {
+    e_gr = "#include ../lingo/full_arith.lingo";
+    parsic(
+        compilePegGrammar("#include ../lingo/full_arith.lingo"),
+        str,
+        defaultPegActions
+    );
+}

@@ -1,0 +1,140 @@
+import calculator;
+
+identity(from: ArExpr, to: ArExpr);
+
+//  переводит массив заданных правил в дерево
+makeIdentitiesTree(identities: [identity]) -> Tree<ArExpr, ArExpr> {
+    fold(identities, makeTree(), \acc, ident -> {
+        setTree(acc, ident.from, ident.to)
+        });
+}
+
+// разуменум мэйби
+decomp(m : Maybe<?>, ifNone : ?) -> ? {
+    switch(m) {
+        Some(v): v;
+        None(): ifNone;
+    }
+}
+
+// является рекурсивным проходом по заданному выражению, 
+// таким образом происходят замены по всей глубине выражения
+findIdentities(expr: ArExpr, identitiesTree : Tree<ArExpr, ArExpr>) -> ArExpr {
+    result = switch(decomp(lookupTree(identitiesTree, expr), expr)) {
+        ArSum(lhs, rhs): ArSum(findIdentities(lhs, identitiesTree), findIdentities(rhs, identitiesTree));
+        ArSub(lhs, rhs): ArSub(findIdentities(lhs, identitiesTree), findIdentities(rhs, identitiesTree));
+        ArMult(lhs, rhs): ArMult(findIdentities(lhs, identitiesTree), findIdentities(rhs, identitiesTree));
+        ArDiv(lhs, rhs): ArDiv(findIdentities(lhs, identitiesTree), findIdentities(rhs, identitiesTree));
+        ArNeg(val): ArNeg(findIdentities(val, identitiesTree));
+        ArRatNum(n, d): decomp(lookupTree(identitiesTree, expr), ArRatNum(n, d));
+        ArVar(val): decomp(lookupTree(identitiesTree, expr), ArVar(val));
+    }
+
+    foldTree(identitiesTree, result, \ident, value, acc -> {
+        isMatch = findTemplates(ident, acc, makeTree());
+        isMatch ?? resolveVars(value, isMatch) : acc;
+    });
+}
+
+//  по новому расширенному шаблону уже рекурсивно делает замены в выражениях.
+resolveVars(expr : ArExpr, varResolve : Tree<ArVar, ArExpr>) -> ArExpr {
+    switch(expr) {
+        ArSum(lhs, rhs): ArSum(resolveVars(lhs, varResolve), resolveVars(rhs, varResolve));
+        ArSub(lhs, rhs): ArSub(resolveVars(lhs, varResolve), resolveVars(rhs, varResolve));
+        ArDiv(lhs, rhs): ArDiv(resolveVars(lhs, varResolve), resolveVars(rhs, varResolve));
+        ArMult(lhs, rhs): ArMult(resolveVars(lhs, varResolve), resolveVars(rhs, varResolve));
+        ArRatNum(n,d): expr;
+        ArVar(val): decomp(lookupTree(varResolve, expr), expr);
+        ArNeg(val): {
+            var = resolveVars(val, varResolve);
+            switch(var) {
+                ArRatNum(n,d): ArNeg(var);
+                ArVar(v): ArNeg(var);
+                default: ArNeg(ArRatNum(1,1));
+            }
+        }
+    }
+}
+
+// рекурсивно проходится по выражению и при попадании в ArVar расширяет шаблон на другие переменные, 
+// если те не присутствуют в изначальном правиле, а затем при разворачивании рекурсии ищет совпадения 
+// с более сложными выражениями с использованием уже расширенных переменных
+findTemplates(templ : ArExpr, expr : ArExpr, identitiesTree : Tree<ArVar, ArExpr>) -> Maybe<Tree<ArVar, ArExpr>> {
+    switch(templ) {
+        ArSum(lhs, rhs): {
+            switch(expr) {
+                ArSum(l, r): {
+                    match = findTemplates(lhs, l, identitiesTree);     
+                    match ?? findTemplates(rhs, r, match) : None();      
+                } 
+                default: None();
+            }
+        }
+        ArSub(lhs, rhs): {
+            switch(expr) {
+                ArSub(l, r): {
+                    match = findTemplates(lhs, l, identitiesTree); 
+                    match ?? findTemplates(rhs, r, match) : None();  
+                }
+                default: None();
+            }
+        }
+        ArMult(lhs, rhs): {
+            switch(expr) {
+                ArMult(l, r): {
+                    match = findTemplates(lhs, l, identitiesTree); 
+                    match ?? findTemplates(rhs, r, match) : None(); 
+                }
+                default: None();
+            }
+        }
+        ArDiv(lhs, rhs): {
+            switch(expr) {
+                ArDiv(l, r): {
+                    match = findTemplates(lhs, l, identitiesTree);
+                    match ?? findTemplates(rhs, r, match) : None();  
+                }
+                default: None();
+            }
+        }
+        ArRatNum(n,d): {
+            switch(expr) {
+                ArRatNum(n1,d1): {
+                    if (templ == expr) {
+                        Some(identitiesTree);
+                    }
+                    else {
+                        None();
+                    }
+                }
+                default: None();
+            }
+        }
+        ArVar(var): {
+            val = lookupTree(identitiesTree, templ);
+            val ?? if (val == expr) Some(identitiesTree) else None() : Some(setTree(identitiesTree, templ, expr));
+        }
+        ArNeg(val): {
+            switch(expr) {
+                ArNeg(val2): findTemplates(val, val2, identitiesTree);
+                default: None();
+            }
+        }
+  }
+}
+
+main() {
+    idenitties = [
+        identity(parser("((x * x) - (y * y))"), parser("((x + y) * (x - y))")),
+        identity(parser("(x / x)"), parser("1"))
+    ];
+
+    str = "(((x * x) - (y * y)) / ((x * x) - (y * y)))";
+
+    println("STR: " + str);
+    expr = parser(str);
+    
+    identExpr = findIdentities(expr, makeIdentitiesTree(idenitties));
+
+    println("\nResult: " + ar2s(identExpr));
+}

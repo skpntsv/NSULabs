@@ -1,0 +1,405 @@
+import calculator;
+
+export {
+    PolMult(mult : Tree<string, int>);
+    PolSum(sum : Tree<PolMult, int>);
+
+    RatFunc(nominator: PolSum, denominator : PolSum);
+
+    sumPolSum(p1 : PolSum, p2 : PolSum) -> PolSum;
+    multPolSum(p1 : PolSum, p2 : PolSum) -> PolSum;
+    negPolSum(p: PolSum) -> PolSum;
+    sumRatFunc(f1:RatFunc, f2:RatFunc) -> RatFunc;
+    negRatFunc(f1:RatFunc) -> RatFunc;
+    multRatFunc(f1:RatFunc, f2:RatFunc) -> RatFunc;
+    divRatFunc(f1: RatFunc, f2:RatFunc) -> RatFunc;
+    calculateRatFunc(e:ArExpr) -> RatFunc;
+    makeSimpleFunc(func: RatFunc) -> RatFunc;
+    findCommonMultiplierInSum(p: PolSum) -> PolSum;
+    findCommonMultiplierInPolMultiplication(p: PolSum) -> PolMult;
+    findCommonMultiplierInNumerators(p: PolSum) -> int;
+    findCommonMultiplierInPolynomialPair(p1 : PolSum, p2 : PolSum) -> PolSum;
+    dividePolSum(num : PolSum, den : PolSum) -> PolSum;
+    similarParts(p : PolSum) -> Tree<string, int>;
+    makeDegreeStr(var : string, degree : int) -> string;
+    polMult2s(pm : PolMult) -> string;
+    createReduceStr4Sum(coef : int, value : string) -> string;
+    polSum2s(ps : PolSum) -> string;
+    RatFunc2s(func : RatFunc) -> string;
+    similarParts2s (func : RatFunc) -> string;
+    createReducePodobn(value : string, coef : int) -> string;
+    similar2s(rfpod : Tree<string, int>) -> string;
+}
+
+
+sumPolSum(p1 : PolSum, p2 : PolSum) -> PolSum {
+    PolSum(filterTree(mergeTreeCustom(p1.sum, p2.sum, \k, v1, v2 -> {
+                v1 + v2;
+            }),
+            \k,v -> {!(v == 0)}
+        )
+    )
+}
+
+multPolSum(p1 : PolSum, p2 : PolSum) -> PolSum {
+    PolSum(
+        filterTree(
+            foldTree(p1.sum, TreeEmpty(), \k1, v1, acc1 -> {
+                mergeTreeCustom(acc1,
+                    foldTree(p2.sum, TreeEmpty(), \k2, v2, acc2 ->
+                    {
+                        multi = PolMult(mergeTreeCustom(k1.mult, k2.mult, \kk, vv1, vv2 -> {
+                            vv1 + vv2
+                        }));
+                        mergeTreeCustom(acc2, makeTree1(multi, v1 * v2), \kk, vv1, vv2 -> {
+                            vv1 + vv2
+                        });
+                    }),
+                    \kk, vv1, vv2 -> {
+                        vv1 + vv2
+                        }
+                )
+            })
+            , \k,v -> {
+                !(v == 0)
+            }
+        )
+    )
+}
+
+negPolSum(p: PolSum) -> PolSum {
+    PolSum(
+        foldTree(p.sum, TreeEmpty(), \k, v, acc -> {
+            mergeTree(acc, makeTree1(k, 0 - v));
+        })
+    )
+}
+
+sumRatFunc(f1:RatFunc, f2:RatFunc) -> RatFunc {
+    nom1 = multPolSum(f1.nominator, f2.denominator);
+    nom2 = multPolSum(f2.nominator, f1.denominator);
+    den = multPolSum(f1.denominator, f2.denominator);
+    RatFunc(sumPolSum(nom1, nom2), den);
+}
+
+negRatFunc(f1:RatFunc) -> RatFunc {
+    RatFunc(negPolSum(f1.nominator), f1.denominator);
+}
+
+multRatFunc(f1:RatFunc, f2:RatFunc) -> RatFunc {
+    RatFunc(multPolSum(f1.nominator, f2.nominator), multPolSum(f1.denominator, f2.denominator));
+}
+
+divRatFunc(f1: RatFunc, f2:RatFunc) -> RatFunc {
+    multRatFunc(f1, RatFunc(f2.denominator, f2.nominator));
+}
+
+calculateRatFunc(e: ArExpr) -> RatFunc {
+    switch(e) {
+        ArSum(l,r): sumRatFunc(calculateRatFunc(l), calculateRatFunc(r));
+        ArSub(l,r): sumRatFunc(calculateRatFunc(l), negRatFunc(calculateRatFunc(r)));
+        ArMult(l,r): multRatFunc(calculateRatFunc(l), calculateRatFunc(r));
+        ArDiv(l,r): divRatFunc(calculateRatFunc(l), calculateRatFunc(r));
+        ArNeg(l): negRatFunc(calculateRatFunc(l));
+        ArVar(v): RatFunc(PolSum(makeTree1(PolMult(makeTree1(v, 1)), 1)), PolSum(makeTree1(PolMult(TreeEmpty()), 1)));
+        ArRatNum(n,d): RatFunc(PolSum(makeTree1(PolMult(TreeEmpty()), n)), PolSum(makeTree1(PolMult(TreeEmpty()), d)));
+    }
+}
+
+makeSimpleFunc(func: RatFunc) -> RatFunc {
+    if (RatFunc2s(func) == "0") {
+        func;
+    }
+    else {
+	    nomCom = findCommonMultiplierInSum(func.nominator);
+	    denCom = findCommonMultiplierInSum(func.denominator);
+
+	    nomRest = dividePolSum(func.nominator, nomCom);
+	    denRest = dividePolSum(func.denominator, denCom);
+
+	    comsCom = findCommonMultiplierInPolynomialPair(nomCom, denCom);
+
+   	    nomComRest = dividePolSum(nomCom, comsCom);
+	    denComRest = dividePolSum(denCom, comsCom);
+
+	    if (nomRest == denRest) {
+		    RatFunc(nomComRest, denComRest);
+	    }
+	    else if (nomRest == negPolSum(denRest)) {
+		    negRatFunc(RatFunc(nomComRest, denComRest));
+	    }
+	    else {
+		    multRatFunc(RatFunc(nomRest, denRest), RatFunc(nomComRest,denComRest))
+	    }
+    }
+}
+
+findCommonMultiplierInSum(p: PolSum) -> PolSum {
+	PolSum(makeTree1(findCommonMultiplierInPolMultiplication(p), findCommonMultiplierInNumerators(p)));
+}
+
+findCommonMultiplierInPolMultiplication(p: PolSum) -> PolMult {
+	if (p.sum == TreeEmpty()) {
+        PolMult(TreeEmpty());
+    }
+	else {
+		firstPoly = (tree2pairs(p.sum))[0];
+		PolMultTree = foldTree(firstPoly.first.mult, firstPoly.first.mult, \k, v, acc -> {
+			foldTree(p.sum, acc, \k1, v1, acc1 -> {
+				v2 = lookupTreeDef(k1.mult, k, 0);
+				mergeTreeCustom(acc1, makeTree1(k, if (v2 > v) v else v2), \k2, vv1, vv2 -> {
+					if (vv1 > vv2) 
+                        vv2
+					else 
+                        vv1
+				})
+			})
+		})
+		PolMult(filterTree(PolMultTree, \k, v -> { 
+            !(v == 0)
+        }));
+	}
+}
+
+findCommonMultiplierInNumerators(p: PolSum) -> int {
+	if (p.sum == TreeEmpty()) 
+        1
+	else {
+		foldTree(p.sum, 0, \k, v, acc -> {
+			if(acc == 0) 
+                iabs(v)
+			else 
+                gcd(acc, iabs(v))
+		})
+	}
+}
+
+findCommonMultiplierInPolynomialPair(p1 : PolSum, p2 : PolSum) -> PolSum {
+	if(p1.sum == TreeEmpty() || p2.sum == TreeEmpty()) {
+        PolSum(makeTree1(PolMult(TreeEmpty()), 1));
+    }
+	else {
+		psp1 = (tree2pairs(p1.sum))[0];
+		psp2 = (tree2pairs(p2.sum))[0];
+		
+		resultNum = gcd(psp1.second, psp2.second);
+
+		resultMult = foldTree(psp1.first.mult, psp1.first.mult, \k, v, acc -> {
+			v2 = lookupTreeDef(psp2.first.mult, k, 0);
+			mergeTreeCustom(acc, makeTree1(k, if(v2 > v) v else v2), \kk, vv1, vv2 -> {
+				if(vv1 > vv2) 
+                    vv2 
+                else 
+                    vv1
+			})
+		})
+		
+		PolSum(makeTree1(PolMult(filterTree(resultMult, \k, v -> {
+            !(v == 0)
+        })), resultNum));
+	}
+}
+
+dividePolSum(num : PolSum, den : PolSum) -> PolSum {
+    if (polSum2s(den) == "1") {
+        num;
+    }
+    else {
+        psp = (tree2pairs(den.sum))[0];
+	    denNum = psp.second;
+	    denMult = psp.first.mult;
+
+	    PolSum( foldTree(num.sum, TreeEmpty(), \k, v, acc -> {
+			    mergeTree(acc,
+				    makeTree1( PolMult(filterTree(
+						mergeTreeCustom(k.mult, denMult, \kk, vv1, vv2 -> {
+							vv2 - vv1;
+						    })
+						    , \k1, v1 -> {!(v1 == 0)})
+					    ),
+					    v/denNum
+				    )
+			    )
+		    }))
+    }
+}
+
+similarParts(p : PolSum) -> Tree<string, int> {
+    plusValues = filterTree(p.sum, \key, value -> {
+        if (value > 0) {
+            true;
+        } 
+        else {
+            false;
+        }
+    });
+
+    textTreePlus = foldTree(plusValues, TreeEmpty(), \k,v,acc -> {
+        mergeTreeCustom(acc,
+            makeTree1( polMult2s(k), v),
+            \kk, vv1,vv2 -> {
+                vv1 + vv2;
+            }
+        )
+    });
+
+    minusValues = filterTree(p.sum, \key, value -> {
+        if (value < 0) {
+            true;
+        } else {
+            false;
+        }
+    });
+
+    textTreeMinus = foldTree(minusValues, TreeEmpty(), \k,v,acc -> {
+        mergeTreeCustom(acc,
+            makeTree1(polMult2s(k), v),
+            \kk,vv1,vv2 -> {
+                vv1 + vv2;
+            }
+        )
+    });
+
+    filterTree(mergeTreeCustom(textTreePlus, textTreeMinus, \k, v1, v2 -> {
+        v1 + v2;
+    }), \key, value -> {
+        value != 0
+    });
+
+}
+
+makeDegreeStr(var : string, degree : int) -> string {
+    if (degree != 1) {
+        var + "^" + i2s(degree);
+    }
+    else{
+        var;
+    }
+}
+
+polMult2s(pm : PolMult) -> string{
+    pairsPolMult = tree2pairs(pm.mult);
+    if (length(pairsPolMult) == 0) {
+        "1";
+    }
+    else {
+        foldi(pairsPolMult, "", \i, acc, v -> {
+            PolMultStr = acc + makeDegreeStr(v.first, v.second);
+            if (i == length(pairsPolMult) - 1) {
+                PolMultStr;
+            }
+            else {
+                PolMultStr + "*"
+            }
+        })
+    }
+}
+
+createReduceStr4Sum(coef : int, value : string) -> string{
+    if ((coef != 1) && (value != "1")) {
+        concatStrings([i2s(coef), "*", value]);
+    }
+    else if ((coef != 1) && (value == "1")) {
+        concatStrings([i2s(coef)]);
+    }
+    else if ((coef == 1) && (value != "1")) {
+        concatStrings([value]);
+    }
+    else {
+        concatStrings([i2s(coef)]);
+    }
+}
+
+polSum2s(ps : PolSum) -> string{
+    pairsPolSum = tree2pairs(ps.sum);
+
+    if (length(pairsPolSum) == 0) {
+        "0";
+    }
+    else {
+        foldi(pairsPolSum, "", \i, acc, v -> {
+        PolSumStr = acc + createReduceStr4Sum(v.second, polMult2s(v.first));
+        if (i == length(pairsPolSum) - 1) {
+            PolSumStr;
+        }
+        else {
+            PolSumStr + " + "
+        }
+        });
+    }
+    
+}
+
+RatFunc2s(func : RatFunc) -> string {
+    if (polSum2s(func.denominator) == "1") {
+        polSum2s(func.nominator);
+    }
+    else {
+        "nominator: " + polSum2s(func.nominator) + 
+            "\ndenominator: " + polSum2s(func.denominator);
+    }
+}
+
+similarParts2s (func : RatFunc) -> string{
+    if (polSum2s(func.denominator) == "1") {
+        similar2s(similarParts(func.nominator));
+    }
+    else {
+        "nominator: " + similar2s(similarParts(func.nominator)) + 
+            "\ndenominator: " + similar2s(similarParts(func.denominator));
+    }
+}
+
+
+createReducePodobn(value : string, coef : int) -> string {
+    if ((coef != 1) && (coef != -1) && (value != "1")) {
+        concatStrings([i2s(coef), "*", value]);
+    }
+    else if ((coef != 1) && (coef != -1) && (value == "1") ){
+        concatStrings([i2s(coef)]);
+    }
+    else if ((coef == 1) && (value != "1")) {
+        concatStrings([value]);
+    }
+    else if ((coef == -1) && (value != "1")) {
+        concatStrings(["-", value]);
+    }
+    else {
+        concatStrings([i2s(coef)]);
+    }
+}
+
+similar2s(rfpod : Tree<string, int>) -> string{
+    pairs = tree2pairs(rfpod);
+
+    if (length(pairs) == 0) {
+        "0";
+    }
+    else {
+        foldi(pairs, "", \i, acc, v -> {
+        PolSumStr = acc + createReducePodobn(v.first, v.second);
+        if (i == length(pairs) - 1) {
+            PolSumStr;
+        }
+        else {
+            PolSumStr + " + "
+        }
+        });
+    }
+}
+
+main() {
+    str = "(((4 * (a * a)) - 9) * ((1 / ((2 * a) - 3)) - (1 / ((2 * a) + 3))))";
+    println("STR:" + str);
+
+    expr = parser(str);
+
+    simpleArExpr = make2simple(expr);
+
+    ratFunc = calculateRatFunc(simpleArExpr);
+    println("RatFunc:\n" + RatFunc2s(ratFunc) + "\n");
+    
+    simpleFunc = makeSimpleFunc(ratFunc);
+    
+    println("Result: \n" + similarParts2s(simpleFunc));
+}

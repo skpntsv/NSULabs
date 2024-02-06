@@ -1,0 +1,150 @@
+import calculator;
+
+export {
+    diff(e : ArExpr, var : ArVar) -> ArExpr;
+    make2simple(e : ArExpr) -> ArExpr;
+}
+
+diff(e : ArExpr, var : ArVar) -> ArExpr {
+    switch(e) {
+        ArMult(lhs, rhs) : ArSum(ArMult(diff(lhs, var), rhs), ArMult(lhs, diff(rhs, var)));
+        ArSum(lhs, rhs) : ArSum(diff(lhs, var), diff(rhs, var));
+        ArDiv(lhs, rhs) : ArDiv(ArSub(ArMult(diff(lhs, var), rhs), ArMult(lhs, diff(rhs, var))), ArMult(rhs, rhs));
+        ArSub(lhs, rhs) : ArSub(diff(lhs, var), diff(rhs, var));
+        ArNeg(val) : ArNeg(diff(val, var));
+        ArInt(val) : ArInt(0);
+        ArVar(val) : {
+            if (val == var.val)
+                ArInt(1)
+            else
+                ArInt(0)
+        }
+    }
+}
+
+make2simple(e : ArExpr) -> ArExpr {
+    switch(e) {
+        ArMult(lhs, rhs) : {
+            a = make2simple(lhs);
+            b = make2simple(rhs);
+
+            if (a == ArInt(0) || b == ArInt(0)) 
+                ArInt(0)
+            else if (a == ArInt(1))
+                b
+            else if (b == ArInt(1))
+                a
+            else if (a.structname == "ArInt" && b.structname == "ArMult") {
+                Int = cast(a : ArExpr -> ArInt);
+                Mult = cast(b : ArExpr -> ArMult);
+                if (Mult.lhs.structname == "ArInt") {
+                    Int2 = cast(Mult.lhs : ArExpr -> ArInt);
+                    make2simple(ArMult(ArInt(Int.val * Int2.val), Mult.rhs));
+                } else if (Mult.rhs.structname == "ArInt") {
+                    Int2 = cast(Mult.rhs : ArExpr -> ArInt);
+                    make2simple(ArMult(ArInt(Int.val * Int2.val), Mult.lhs));
+                } else {
+                    ArMult(a, b);
+                }
+            }
+            else if (a.structname == "ArMult" && b.structname == "ArInt") {
+                make2simple(ArMult(b, a));
+            } else if (a.structname == "ArInt" && b.structname == "ArInt") {
+                Int1 = cast(a : ArExpr -> ArInt);
+                Int2 = cast(b : ArExpr -> ArInt);
+                ArInt(Int1.val * Int2.val);
+            } else {
+                ArMult(a, b);
+            }
+        }
+        ArSum(lhs, rhs) : {
+            a = make2simple(lhs);
+            b = make2simple(rhs);
+
+            if (a == ArInt(0))
+                b
+            else if (b == ArInt(0))
+                a
+            else if (a == b) {
+                make2simple(ArMult(ArInt(2), a));
+            } else if (a.structname == "ArInt" && b.structname == "ArInt") {
+                Int1 = cast(a : ArExpr -> ArInt);
+                Int2 = cast(b : ArExpr -> ArInt);
+                ArInt(Int1.val + Int2.val);
+            }
+            else if (a.structname == "ArInt" && b.structname == "ArSum") {
+                Int = cast(a : ArExpr -> ArInt);
+                Sum = cast(b : ArExpr -> ArSum);
+                if (Sum.lhs.structname == "ArInt") {
+                    Int2 = cast(Sum.lhs : ArExpr -> ArInt);
+                    make2simple(ArSum(ArInt(Int.val + Int2.val), Sum.rhs));
+                } else if (Sum.rhs.structname == "ArInt") {
+                    Int2 = cast(Sum.rhs : ArExpr -> ArInt);
+                    make2simple(ArSum(ArInt(Int.val + Int2.val), Sum.lhs));
+                } else {
+                    ArSum(a, b);
+                }
+            } else if (a.structname == "ArInt" && b.structname == "ArInt") {
+                make2simple(ArSum(b, a));
+            } else if (a.structname == "ArSub" && b.structname == "ArInt") {
+                Int = cast(a : ArExpr -> ArInt);
+                Sub = cast(b : ArExpr -> ArSub);
+                if (Sub.lhs.structname == "ArInt") {
+                    Int2 = cast(Sub.lhs : ArExpr -> ArInt);
+                    make2simple(ArSub(ArInt(Int.val + Int2.val), Sub.rhs));
+                } else if (Sub.rhs.structname == "ArInt") {
+                    Int2 = cast(Sub.rhs : ArExpr -> ArInt);
+                    make2simple(ArSub(ArInt(Int.val + Int2.val), Sub.lhs));
+                } else {
+                    ArSum(a, b);
+                }
+            } else if (a.structname == "ArInt" && b.structname == "Sub") {
+                make2simple(ArSum(b, a));
+            } else if (b.structname == "Neg") {
+                neg = cast(b : ArExpr -> ArNeg);
+                ArSub(a, neg.val);
+            } else {
+                ArSum(a, b);
+            }
+        }
+        ArDiv(lhs, rhs) : {
+            a = make2simple(lhs);
+            b = make2simple(rhs);
+
+            if (a == ArInt(0))
+                ArInt(0)
+            else if (a == b)
+                ArInt(1)
+            else if (a.structname == "ArInt" && b.structname == "ArInt") {
+                Int1 = cast(a : ArExpr -> ArInt);
+                Int2 = cast(b : ArExpr -> ArInt);
+                ArInt(Int1.val / Int2.val);
+            } else {
+                ArDiv(a, b);
+            }
+        }
+        ArNeg(val) : {
+            if (val == ArInt(0))
+                val
+            else
+                ArNeg(make2simple(val));
+        }
+        ArSub(lhs, rhs) : make2simple(ArSum(lhs, ArNeg(rhs)));
+        ArInt(val) : ArInt(val);
+        ArVar(val) : ArVar(val);
+    }
+}
+
+main() {
+    //str = "(-(1*1)/(x*x))";
+    str = "(1/x)";
+    ex = parser(str);
+    println(ex);
+    var = ArVar("x");
+    //simple = make2simple(ex);
+    //println("simple func: " + ar2s(simple));
+    d = diff(ex, var);
+    simple = make2simple(d);
+    println("diff: " + ar2s(d) + "\n");
+    println("result: " + ar2s(simple) + "\n");
+}

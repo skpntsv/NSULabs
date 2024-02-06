@@ -1,0 +1,19 @@
+import string;
+
+arr2s(arr: [int]) -> string {
+    strGlue(map(arr, i2s), ",")
+}
+
+main() {
+    arr = [1, 2, 3];
+    println("arr: " + arr2s(arr));
+}
+
+
+
+S = sum | mul | int ;
+sum = "(" ws S:l ws "+" ws S:r ws ")" { ArSum(:l, :r)}; 
+mul = "(" ws S:l ws "*" ws S:r ws ")" { ArMult(:l, :r)}; 
+int = digit+ $s {ArInt(s2i($s)) };
+digit = '0' - '9';
+ws = (' ' | '\t' | '\n' | '\r')*;
