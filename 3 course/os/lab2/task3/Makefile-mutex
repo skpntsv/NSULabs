@@ -1,0 +1,20 @@
+EXECUTABLES=test_my_mutex
+SOURCES=./src/
+
+TYPE=.c
+CC=gcc
+RM=rm
+CFLAGS=-Wall
+LIBS=../task1/sync/queue.c my_mutex_lib/my_mutex.c
+LDFLAGS=-o $@
+
+all: $(EXECUTABLES)
+
+$(EXECUTABLES): %: $(SOURCES)%$(TYPE)
+	$(CC) $(CFLAGS) $(LDFLAGS) $< ${LIBS}
+
+run: $(EXECUTABLES)
+	./${EXECUTABLES}
+
+clean:
+	${RM} -f *.o $(EXECUTABLES)
