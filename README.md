@@ -35,4 +35,27 @@
 
 ## 3️⃣ курс
 
-`В процессе обучения....`
+### Операционные системы (многопоточность)
+
+- [Лабораторные работы](https://github.com/ronk101/NSULabs/tree/cc99ad5c9823f51632696088dedab3ea37b60863/3%20course/os)
+
+### Вычислительная математика
+
+- [Лабораторные работы](https://github.com/ronk101/NSULabs/tree/cc99ad5c9823f51632696088dedab3ea37b60863/3%20course/comp_math)
+
+### Базы данных
+
+- [Лабораторные работы](https://github.com/ronk101/NSULabs/tree/cc99ad5c9823f51632696088dedab3ea37b60863/3%20course/database)
+- [Проект (в процессе...)]()
+
+### Объектно-ориентированный анализ (ООАиД)
+
+- Проект [**КиноЛист**](https://github.com/ronk101/kinolist)
+
+### Методы трансляции и компиляции (верификации)
+
+- [Лабораторные работы](https://github.com/ronk101/NSULabs/tree/cc99ad5c9823f51632696088dedab3ea37b60863/3%20course/mtk)
+
+### Сети и телекоммуникации
+
+- [Лабораторные работы](https://github.com/ronk101/NSULabs/tree/cc99ad5c9823f51632696088dedab3ea37b60863/3%20course/networks)
