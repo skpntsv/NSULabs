@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REPO_PATH="."
+REPO_PATH="/home/skpntsv/git/kinolist"
 N_DAYS=30
 
 cd "$REPO_PATH" || exit
