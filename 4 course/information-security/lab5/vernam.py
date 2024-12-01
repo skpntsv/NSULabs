@@ -8,7 +8,7 @@ def vernam_encrypt_decrypt(text, key):
     """Шифрование/дешифрование методом Вернама"""
     if len(text) != len(key):
         raise ValueError("Длина текста и ключа должны совпадать")
-    return ''.join(chr(ord(t) ^ ord(k)) for t, k in zip(text, key))
+    return ''.join(chr(ord(t) ^ ord(k)) for t, k in zip(text, key)) # XOR между байтами текста и ключом
 
 
 
