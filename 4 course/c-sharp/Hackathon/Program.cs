@@ -13,7 +13,7 @@ var host = Host.CreateDefaultBuilder(args)
 
         services.AddTransient<SandBox>();
         services.AddTransient<Hackathon.Core.Hackathon>();
-        services.AddTransient<ITeamBuildingStrategy, BuildingStrategy>();
+        services.AddTransient<ITeamBuildingStrategy, HungarianStrategy>();
         services.AddTransient<HrManager>();
         services.AddTransient<HrDirector>();
     }).Build();
