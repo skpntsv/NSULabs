@@ -40,12 +40,12 @@ public class EmployeeConsumer : IConsumer<StartingHackathon>
     public async Task Consume(ConsumeContext<StartingHackathon> context)
     {
         _logger.LogInformation(
-            $"{_thisEmployee.Type.ToString()} {_thisEmployee.Name} (Id = {_thisEmployee.Id}) received StartingHackathon message: ExperimentId = {context.Message.ExperimentId}, HackathonCout = {context.Message.HackathonCount}");
+            $"{_thisEmployee.Type.ToString()} {_thisEmployee.Name} (Id = {_thisEmployee.Id}) received StartingHackathon message: ExperimentId = {context.Message.ExperimentId}, HackathonCout = {context.Message.HackathonNumber}");
 
         await context.Publish<GeneratingWishlist>(new
         {
             context.Message.ExperimentId,
-            context.Message.HackathonCount,
+            HackathonCount = context.Message.HackathonNumber,
             Wishlist = _thisEmployee.GenerateWishList(_coworkers),
         });
     }
