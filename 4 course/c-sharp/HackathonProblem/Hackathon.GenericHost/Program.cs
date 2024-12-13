@@ -1,6 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Hackathon.Core.Models;
+using Hackathon.Core.Strategy;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Hackathon.Core;
 
 namespace Hackathon.GenericHost;
 
@@ -12,14 +13,12 @@ class Program
             .ConfigureServices((hostContext, services) =>
             {
                 var configuration = hostContext.Configuration;
-                string teamLeadsCsvPath = configuration["TeamLeadsCsvPath"] ??
-                                          throw new FileLoadException("TeamLeadsCsvPath not found");
-                string juniorsCsvPath = configuration["JuniorsCsvPath"] ??
-                                        throw new FileLoadException("JuniorsCsvPath not found");
+                const string teamLeadsCsvPath = "../Resources/TeamLeads20.csv";
+                const string juniorsCsvPath = "../../Resources/Juniors20.csv";
 
                 services.AddHostedService<HackathonWorker>();
                 services.AddSingleton<Hackathon.Core.Models.Hackathon>(_ =>
-                    new Hackathon(teamLeadsCsvPath, juniorsCsvPath));
+                    new Core.Models.Hackathon(teamLeadsCsvPath, juniorsCsvPath));
                 services.AddSingleton<ITeamBuildingStrategy, RandomTeamBuildingStrategy>();
                 services.AddScoped<HrManager>();
                 services.AddTransient<HrDirector>();

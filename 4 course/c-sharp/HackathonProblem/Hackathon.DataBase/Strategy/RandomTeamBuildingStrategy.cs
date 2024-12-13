@@ -1,3 +1,5 @@
+using Hackathon.DataBase.Models;
+
 namespace Hackathon.DataBase.Strategy;
 
 public class RandomTeamBuildingStrategy : ITeamBuildingStrategy

@@ -4,6 +4,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackathonProblem", "Hackath
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackathonTest", "..\HackathonTest\HackathonTest.csproj", "{C36F0559-D61A-49AD-A5F7-F777C10B09A7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hackathon.Core", "..\Hackathon.Core\Hackathon.Core.csproj", "{A70CE2E3-9DDE-4901-A9DD-7E1385170B3B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hackathon.Contracts", "..\Hackathon.Contracts\Hackathon.Contracts.csproj", "{D89DDA8D-1F9F-469B-A466-A5C9EC8CDB27}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +22,15 @@ Global
 		{C36F0559-D61A-49AD-A5F7-F777C10B09A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C36F0559-D61A-49AD-A5F7-F777C10B09A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C36F0559-D61A-49AD-A5F7-F777C10B09A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A70CE2E3-9DDE-4901-A9DD-7E1385170B3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A70CE2E3-9DDE-4901-A9DD-7E1385170B3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A70CE2E3-9DDE-4901-A9DD-7E1385170B3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A70CE2E3-9DDE-4901-A9DD-7E1385170B3B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D89DDA8D-1F9F-469B-A466-A5C9EC8CDB27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D89DDA8D-1F9F-469B-A466-A5C9EC8CDB27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D89DDA8D-1F9F-469B-A466-A5C9EC8CDB27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D89DDA8D-1F9F-469B-A466-A5C9EC8CDB27}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection
 EndGlobal

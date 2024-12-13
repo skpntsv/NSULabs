@@ -1,4 +1,4 @@
-﻿using Hackathon.Contracts;
+﻿using Hackathon.Core.Contracts;
 using Hackathon.Core;
 using Hackathon.HR;
 using Hackathon.Strategies;
