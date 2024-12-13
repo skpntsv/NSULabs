@@ -1,6 +1,6 @@
 using MassTransit;
 using HrManager.Models.Logic;
-using HrManagerService.Controllers;
+using HrManagerService.Consumers;
 using HrManagerService.Models.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +13,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString);
 });
 
+builder.Services.AddScoped<HrManagerService.Services.HrManagerService>();
+
 builder.Services.AddControllers();
 
 builder.Services.AddMassTransit(x =>
@@ -20,7 +22,6 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<HrManagerConsumer>();
     x.UsingRabbitMq((context, cfg) =>
     {
-        
         var rabbitMqUser = builder.Configuration["RabbitMQ:Username"];
         var rabbitMqPass = builder.Configuration["RabbitMQ:Password"];
         var rabbitMqHost = builder.Configuration["RabbitMQ:Host"];
@@ -29,7 +30,7 @@ builder.Services.AddMassTransit(x =>
             h.Username(rabbitMqUser);
             h.Password(rabbitMqPass);
         });
-        
+
         cfg.ConfigureEndpoints(context);
     });
 });
