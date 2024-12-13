@@ -1,4 +1,4 @@
-using HrDirectorService.Controllers;
+using HrDirectorService.Consumer;
 using HrDirectorService.Models.Data;
 using HrDirectorService.Models.Logic;
 using MassTransit;
@@ -12,6 +12,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     options.UseNpgsql(connectionString);
 });
+
+builder.Services.AddScoped<HrDirectorService.Service.HrDirectorService>();
 
 builder.Services.AddMassTransit(x =>
 {
