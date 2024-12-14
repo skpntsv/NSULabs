@@ -5,17 +5,14 @@ using Shared.Model.Messages;
 using Shared.Model.Records;
 using Options = EmployeeService.Models.Options;
 
-
-namespace EmployeeService.Controllers;
+namespace EmployeeService.Consumers;
 
 public class EmployeeConsumer : IConsumer<StartingHackathon>
 {
     private readonly Employee _thisEmployee;
-    private readonly IEnumerable<Employee> _coworkers;
+    private readonly List<Employee> _coworkers;
 
     private readonly ILogger<EmployeeConsumer> _logger;
-    private readonly IEnumerable<Employee> _juniors;
-    private readonly IEnumerable<Employee> _teamLeads;
 
     public EmployeeConsumer(ILogger<EmployeeConsumer> logger, EmployeesReader reader, IOptions<Options> options)
     {
@@ -25,16 +22,16 @@ public class EmployeeConsumer : IConsumer<StartingHackathon>
             throw new InvalidOperationException("Invalid Employee type " + options.Value.EmployeeType);
         }
 
-        _teamLeads = reader.ReadTeamLeads(options.Value.TeamLeadsFile);
-        _juniors = reader.ReadJuniors(options.Value.JuniorsFile);
+        var teamLeads = reader.ReadTeamLeads(options.Value.TeamLeadsFile);
+        var juniors = reader.ReadJuniors(options.Value.JuniorsFile);
 
         var thisEmployeeId = options.Value.EmployeeId;
 
-        var employeesWithTheSameType = employeeType.Equals(EmployeeTypes.TeamLead) ? _teamLeads : _juniors;
+        var employeesWithTheSameType = employeeType.Equals(EmployeeTypes.TeamLead) ? teamLeads : juniors;
 
         _thisEmployee = employeesWithTheSameType.FirstOrDefault(x => x.Id == thisEmployeeId) ??
                         throw new InvalidOperationException("Uncorrected EmployeeId");
-        _coworkers = employeeType.Equals(EmployeeTypes.TeamLead) ? _juniors : _teamLeads;
+        _coworkers = employeeType.Equals(EmployeeTypes.TeamLead) ? juniors : teamLeads;
     }
 
     public async Task Consume(ConsumeContext<StartingHackathon> context)

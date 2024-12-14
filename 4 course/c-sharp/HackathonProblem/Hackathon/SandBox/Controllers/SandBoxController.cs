@@ -55,11 +55,10 @@ public class SandBoxController(
             ExperimentStatus.Failed => "Эксперимент завершился с ошибкой.",
             _ => "Неизвестный статус эксперимента."
         };
-
         return Ok(new
         {
             experiment.Id,
-            HackathonNumber = experiment.HackathonCount,
+            experiment.HackathonCount,
             Status = experiment.Status.ToString(),
             StatusMessage = statusMessage
         });
@@ -82,6 +81,10 @@ public class SandBoxController(
     public async Task<IActionResult> GetExperimentScores(int experimentId)
     {
         var scores = await fetchService.GetScoresAsync(experimentId);
+        if (scores.Count == 0)
+        {
+            return NotFound("Нет данных о score для данного эксперимента.");
+        }
         return Ok(scores);
     }
 
@@ -89,6 +92,10 @@ public class SandBoxController(
     public async Task<IActionResult> GetExperimentTeams(int experimentId)
     {
         var teams = await fetchService.GetTeamsAsync(experimentId);
+        if (teams.Count == 0)
+        {
+            return NotFound("Нет данных о командах для данного эксперимента.");
+        }
         return Ok(teams);
     }
 }

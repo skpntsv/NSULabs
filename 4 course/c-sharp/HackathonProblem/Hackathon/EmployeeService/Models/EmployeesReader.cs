@@ -7,19 +7,19 @@ namespace EmployeeService.Models;
 
 public class EmployeesReader
 {
-    public IEnumerable<Employee> ReadJuniors(string filePath)
+    public List<Employee> ReadJuniors(string filePath)
     {
         return ReadEmployee(filePath, EmployeeTypes.Junior);
     }
 
-    public IEnumerable<Employee> ReadTeamLeads(string filePath)
+    public List<Employee> ReadTeamLeads(string filePath)
     {
         return ReadEmployee(filePath, EmployeeTypes.TeamLead);
     }
 
     private record EmployeeRaw(int Id, string Name);
 
-    private IEnumerable<Employee> ReadEmployee(string filePath, EmployeeTypes type)
+    private static List<Employee> ReadEmployee(string filePath, EmployeeTypes type)
     {
         using var reader = new StreamReader(filePath);
         using var csvReader =

@@ -1,4 +1,4 @@
-using EmployeeService.Controllers;
+using EmployeeService.Consumers;
 using EmployeeService.Models;
 using MassTransit;
 
@@ -21,14 +21,25 @@ builder.Services.AddMassTransit(x =>
         var rabbitMqUser = builder.Configuration["RabbitMQ:Username"];
         var rabbitMqPass = builder.Configuration["RabbitMQ:Password"];
         var rabbitMqHost = builder.Configuration["RabbitMQ:Host"];
+
         cfg.Host(rabbitMqHost, "/", h =>
         {
             h.Username(rabbitMqUser);
             h.Password(rabbitMqPass);
         });
 
-        cfg.ReceiveEndpoint($"Employee_queue_{Guid.NewGuid()}",
-            e => { e.ConfigureConsumer<EmployeeConsumer>(context); });
+        // Получение параметров из Options
+        var options = builder.Configuration.GetSection("Options").Get<Options>();
+        if (options != null)
+        {
+            var queueName = $"Employee_queue_{options.EmployeeType}_{options.EmployeeId}";
+
+            cfg.ReceiveEndpoint(queueName, e => { e.ConfigureConsumer<EmployeeConsumer>(context); });
+        }
+        else
+        {
+            throw new Exception("Настройки Options не найдены!");
+        }
     });
 });
 
