@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Hackathon.Core.Api.Messages;
+using Hackathon.Core.Model.DataBase;
+using Hackathon.Core.Model.Mappers;
+using Microsoft.EntityFrameworkCore;
 using SandBox.Models.Data;
-using Shared.Model.DataBase;
-using Shared.Model.Mappers;
-using Shared.Model.Messages;
 
 namespace SandBox.Services;
 

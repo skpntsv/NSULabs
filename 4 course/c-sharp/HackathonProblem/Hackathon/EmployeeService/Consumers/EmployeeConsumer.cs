@@ -1,8 +1,8 @@
 using EmployeeService.Models;
+using Hackathon.Core.Api.Messages;
+using Hackathon.Core.Api.Records;
 using MassTransit;
 using Microsoft.Extensions.Options;
-using Shared.Model.Messages;
-using Shared.Model.Records;
 using Options = EmployeeService.Models.Options;
 
 namespace EmployeeService.Consumers;

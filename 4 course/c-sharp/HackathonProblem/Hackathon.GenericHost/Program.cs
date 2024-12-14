@@ -1,5 +1,7 @@
 ﻿using Hackathon.Core.Models;
 using Hackathon.Core.Strategy;
+using Hackathon.Core.Strategy.Api;
+using Hackathon.Core.Strategy.Implementation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 

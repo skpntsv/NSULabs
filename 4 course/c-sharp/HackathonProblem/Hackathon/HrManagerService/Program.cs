@@ -1,8 +1,10 @@
+using Hackathon.Core.Api;
+using Hackathon.Core.Implementation;
 using MassTransit;
-using HrManager.Models.Logic;
 using HrManagerService.Consumers;
 using HrManagerService.Models.Data;
 using Microsoft.EntityFrameworkCore;
+using HrManager = HrManagerService.Models.HrManager;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,8 +38,8 @@ builder.Services.AddMassTransit(x =>
 });
 
 builder.Services
-    .AddTransient<HrManagerLogic>()
-    .AddTransient<ITeamBuildingStrategy, SimpleStrategy>();
+    .AddTransient<HrManager>()
+    .AddTransient<ITeamBuildingStrategy, SmartBuildingStrategy>();
 
 // Создание приложения
 var app = builder.Build();

@@ -1,7 +1,7 @@
 using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
-using Shared.Model.Records;
+using Hackathon.Core.Api.Records;
 
 namespace EmployeeService.Models;
 

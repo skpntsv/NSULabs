@@ -1,5 +1,5 @@
+using Hackathon.Core.Model.DataBase;
 using Microsoft.EntityFrameworkCore;
-using Shared.Model.DataBase;
 
 namespace SandBox.Models.Data;
 
@@ -34,28 +34,3 @@ public class ApplicationDbContext : DbContext
             .OwnsOne(e => e.Employee);
     }
 }
-
-/*
-SandBox:
-    Experiment: Id, HackathonNumber, Status, AverageScore
-    Hackathon:  ExperimentId, HackathonCout, Score
-    EmployeeDB: Id, ExperimentId, Employee
-    WishlistDB: Id, ExperimentId, HackathonCount, EmployeeDB, list<EmployeeDB>
-    TeamDB: Id, ExperimentId, HackathonCount, EmployeeDB TeamLead, EmployeeDB Junior
-
-HrDirector:
-    EmployeeDB: Id, ExperimentId, Employee
-    WishlistDB: Id, ExperimentId, HackathonCount, EmployeeDB, list<EmployeeDB>
-    TeamDB: Id, ExperimentId, HackathonCount, EmployeeDB TeamLead, EmployeeDB Junior
-
-HrManager:
-   EmployeeDB: Id, ExperimentId, Employee
-   WishlistDB: Id, ExperimentId, HackathonCount, EmployeeDB, list<EmployeeDB>
-
-Messaged:
-    RunningExperiment - from SandBox to HrDirector
-    StartingHackathon - from HrDirector to Employees and Sandbox?
-    GeneratingWishlists - from Employees to HrManager, HrDirector and Sandbox
-    GeneratingTeams - from HrManager to HrDirector and Sandbox
-    CalculatingScore - from HrDirector to SandBox
-*/

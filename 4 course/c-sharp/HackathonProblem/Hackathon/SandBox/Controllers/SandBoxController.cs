@@ -1,8 +1,8 @@
+using Hackathon.Core.Api.Messages;
+using Hackathon.Core.Model.DataBase;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using SandBox.Services;
-using Shared.Model.DataBase;
-using Shared.Model.Messages;
 
 namespace SandBox.Controllers;
 
@@ -74,7 +74,11 @@ public class SandBoxController(
             return NotFound("Нет данных о score для данного эксперимента.");
         }
 
-        return Ok(new { ExperimentId = experimentId, AverageScore = averageScore });
+        return Ok(new
+        {
+            ExperimentId = experimentId, 
+            AverageScore = averageScore
+        });
     }
 
     [HttpGet("{experimentId}/scores")]

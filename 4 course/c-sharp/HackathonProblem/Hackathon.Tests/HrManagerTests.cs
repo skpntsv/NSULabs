@@ -1,5 +1,6 @@
 using Hackathon.Core.Models;
 using Hackathon.Core.Strategy;
+using Hackathon.Core.Strategy.Implementation;
 
 namespace Hackathon.Tests;
 
@@ -64,7 +65,7 @@ public class HrManagerTests
             hrManager.ReceiveWishlist(wishlist, "Junior");
         }
 
-        var strategy = new MegaTeamBuildingStrategy();
+        var strategy = new SmartBuildingStrategy();
         var teams = hrManager.GenerateTeams(strategy, hackathon);
 
         Assert.Equal(2, teams.Count);

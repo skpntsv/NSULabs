@@ -1,4 +1,5 @@
 using Hackathon.Core.Strategy;
+using Hackathon.Core.Strategy.Api;
 
 namespace Hackathon.Core.Models
 {

@@ -1,15 +1,16 @@
-using HrManager.Models.Logic;
+using Hackathon.Core.Api.Messages;
+using Hackathon.Core.Api.Records;
+using Hackathon.Core.Implementation;
+using Hackathon.Core.Model.Mappers;
 using MassTransit;
-using Shared.Model.Mappers;
-using Shared.Model.Messages;
-using Shared.Model.Records;
+using HrManager = HrManagerService.Models.HrManager;
 
 namespace HrManagerService.Consumers;
 
 public class HrManagerConsumer(
     ILogger<HrManagerConsumer> logger,
     Services.HrManagerService hrManagerService,
-    HrManagerLogic hrManager) : IConsumer<GeneratingWishlist>
+    HrManager hrManager) : IConsumer<GeneratingWishlist>
 {
     private const int RequiredNumber = 5;
     private static readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);

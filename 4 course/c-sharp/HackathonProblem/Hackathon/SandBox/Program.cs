@@ -14,8 +14,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 
 // Регистрация сервисов в DI
-builder.Services.AddScoped<ExperimentSaveService>(); // Сервис для сохранения данных
-builder.Services.AddScoped<ExperimentFetchService>(); // Сервис для извлечения данных
+builder.Services.AddScoped<ExperimentSaveService>();
+builder.Services.AddScoped<ExperimentFetchService>();
 
 // Добавление контроллеров
 builder.Services.AddControllers();

@@ -1,5 +1,6 @@
 using Hackathon.Core.Models;
 using Hackathon.Core.Strategy;
+using Hackathon.Core.Strategy.Implementation;
 
 namespace Hackathon.Tests;
 

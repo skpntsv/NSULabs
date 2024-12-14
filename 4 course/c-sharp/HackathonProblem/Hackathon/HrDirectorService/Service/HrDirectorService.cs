@@ -1,8 +1,8 @@
-﻿using HrDirectorService.Models.Data;
+﻿using Hackathon.Core.Api.Messages;
+using Hackathon.Core.Api.Records;
+using Hackathon.Core.Model.Mappers;
+using HrDirectorService.Models.Data;
 using Microsoft.EntityFrameworkCore;
-using Shared.Model.Mappers;
-using Shared.Model.Messages;
-using Shared.Model.Records;
 
 namespace HrDirectorService.Service;
 

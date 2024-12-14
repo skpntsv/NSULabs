@@ -1,10 +1,7 @@
-using HrDirectorService.Models.Data;
+using Hackathon.Core.Api.Messages;
+using Hackathon.Core.Api.Records;
 using HrDirectorService.Models.Logic;
 using MassTransit;
-using Microsoft.EntityFrameworkCore;
-using Shared.Model.Mappers;
-using Shared.Model.Messages;
-using Shared.Model.Records;
 
 namespace HrDirectorService.Consumer;
 
@@ -67,7 +64,8 @@ public class HrDirectorConsumer(
         }
     }
 
-    private async Task PublishCalculatedScore(double score, int experimentId, int hackathonCount, IPublishEndpoint publisher)
+    private async Task PublishCalculatedScore(double score, int experimentId, int hackathonCount,
+        IPublishEndpoint publisher)
     {
         logger.LogInformation("HrDirector published CalculatedScore");
         await publisher.Publish<CalculatingScore>(new

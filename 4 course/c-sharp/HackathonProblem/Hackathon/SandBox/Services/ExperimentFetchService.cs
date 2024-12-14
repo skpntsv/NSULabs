@@ -1,6 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Hackathon.Core.Model.DataBase;
+using Microsoft.EntityFrameworkCore;
 using SandBox.Models.Data;
-using Shared.Model.DataBase;
 
 namespace SandBox.Services;
 

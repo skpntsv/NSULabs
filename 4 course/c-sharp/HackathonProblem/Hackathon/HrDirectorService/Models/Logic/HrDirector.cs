@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using Shared.Model.Records;
+using Hackathon.Core.Api.Records;
 
 namespace HrDirectorService.Models.Logic;
 

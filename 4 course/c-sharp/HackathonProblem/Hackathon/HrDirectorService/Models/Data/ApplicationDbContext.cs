@@ -1,5 +1,5 @@
+using Hackathon.Core.Model.DataBase;
 using Microsoft.EntityFrameworkCore;
-using Shared.Model.DataBase;
 
 namespace HrDirectorService.Models.Data;
 

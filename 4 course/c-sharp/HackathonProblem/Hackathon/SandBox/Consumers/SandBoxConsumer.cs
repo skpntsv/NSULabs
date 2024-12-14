@@ -1,7 +1,7 @@
+using Hackathon.Core.Api.Messages;
+using Hackathon.Core.Model.DataBase;
 using MassTransit;
 using SandBox.Services;
-using Shared.Model.Messages;
-using Shared.Model.DataBase;
 
 namespace SandBox.Consumers;
 

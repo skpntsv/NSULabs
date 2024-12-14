@@ -1,5 +1,7 @@
 ﻿using Hackathon.Core.Models;
 using Hackathon.Core.Strategy;
+using Hackathon.Core.Strategy.Api;
+using Hackathon.Core.Strategy.Implementation;
 
 namespace Hackathon.Core;
 
@@ -27,7 +29,7 @@ class Program
                 junior.SendWishlistToHrManager(wishlist, "Junior", hrManager);
             }
                 
-            ITeamBuildingStrategy strategy = new MegaTeamBuildingStrategy();
+            ITeamBuildingStrategy strategy = new SmartBuildingStrategy();
             List<Team> teams = hrManager.GenerateTeams(strategy, hackathon);
             hrManager.SendTeamsToHrDirector(teams, hrDirector);
             var harmonicMean = hrDirector.CalculateTeamsScore();
