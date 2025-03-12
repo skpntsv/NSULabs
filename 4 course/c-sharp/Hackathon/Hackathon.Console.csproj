@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="CsvHelper" Version="33.0.1" />
+        <PackageReference Include="microsoft.extensions.dependencyinjection" Version="8.0.1" />
+        <PackageReference Include="microsoft.extensions.hosting" Version="8.0.1" />
+        <PackageReference Include="HungarianAlgorithm" Version="2.3.2" />
+        
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Include="Resources\Juniors5.csv">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+      <None Remove="resources\Juniors20.csv" />
+      <EmbeddedResource Include="Resources\Juniors20.csv">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+      <None Remove="resources\Teamleads5.csv" />
+      <EmbeddedResource Include="Resources\Teamleads5.csv">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+      <None Remove="resources\Teamleads20.csv" />
+      <EmbeddedResource Include="Resources\Teamleads20.csv">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="obj\" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,221 @@
+﻿x-employee: &employee
+  build:
+    context: .
+    dockerfile: EmployeeService/Dockerfile
+  environment:
+    ASPNETCORE_ENVIRONMENT: Development
+  depends_on:
+    rabbitmq:
+      condition: service_healthy
+
+
+services:
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"    # Для приложений
+      - "15672:15672"  # Для веб-интерфейса управления
+    environment:
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  
+  # База данных
+  sandbox-db:
+    image: postgres:15
+    container_name: sandbox-db-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+      
+  
+  sandbox:
+    build:
+      context: .
+      dockerfile: SandBox/Dockerfile
+    container_name: sandbox
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=sandbox-db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - sandbox-db
+      - rabbitmq
+
+#  hackathon:
+#    build:
+#      context: .
+#      dockerfile: Hackathon/Dockerfile
+#    container_name: hackathon
+#    environment:
+#      ASPNETCORE_ENVIRONMENT: Development
+#      RabbitMq__User: ${RABBITMQ_USER}
+#      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+#      RabbitMq__Host: ${RABBITMQ_HOST}
+#    depends_on:
+#      - rabbitmq
+  
+  # База данных
+  hr-manager-db:
+    image: postgres:15
+    container_name: hr-manager-db-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5433:5432"
+
+  hr-manager:
+    build:
+      context: .
+      dockerfile: HrManagerService/Dockerfile
+    container_name: hr-manager
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=hr-manager-db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+    depends_on:
+      - hr-manager-db
+      - rabbitmq
+  
+  # База данных
+  hr-director-db:
+    image: postgres:15
+    container_name: hr-director-db-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5434:5432"
+
+  hr-director:
+    build:
+      context: .
+      dockerfile: HrDirectorService/Dockerfile
+    container_name: hr-director
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=hr-director-db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+    depends_on:
+      - hr-director-db
+      - rabbitmq
+  
+  teamlead-1:
+    <<: *employee
+    environment:
+      OPTIONS__EMPLOYEEID: 1
+      OPTIONS__EMPLOYEETYPE: TeamLead
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+
+  teamlead-2:
+    <<: *employee
+    environment:
+      OPTIONS__EMPLOYEEID: 2
+      OPTIONS__EMPLOYEETYPE: TeamLead
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+
+  teamlead-3:
+    <<: *employee
+    environment:
+      OPTIONS__EMPLOYEEID: 3
+      OPTIONS__EMPLOYEETYPE: TeamLead
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+
+  teamlead-4:
+    <<: *employee
+    environment:
+      OPTIONS__EMPLOYEEID: 4
+      OPTIONS__EMPLOYEETYPE: TeamLead
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+
+  teamlead-5:
+    <<: *employee
+    environment:
+      OPTIONS__EMPLOYEEID: 5
+      OPTIONS__EMPLOYEETYPE: TeamLead
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+
+  junior-1:
+    <<: *employee
+    environment:
+      OPTIONS__EMPLOYEEID: 1
+      OPTIONS__EMPLOYEETYPE: Junior
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+
+  junior-2:
+    <<: *employee
+    environment:
+      OPTIONS__EMPLOYEEID: 2
+      OPTIONS__EMPLOYEETYPE: Junior
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+
+  junior-3:
+    <<: *employee
+    environment:
+      OPTIONS__EMPLOYEEID: 3
+      OPTIONS__EMPLOYEETYPE: Junior
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+
+  junior-4:
+    <<: *employee
+    environment:
+      OPTIONS__EMPLOYEEID: 4
+      OPTIONS__EMPLOYEETYPE: Junior
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+
+  junior-5:
+    <<: *employee
+    environment:
+      OPTIONS__EMPLOYEEID: 5
+      OPTIONS__EMPLOYEETYPE: Junior
+      RabbitMq__User: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST}
+
+    
