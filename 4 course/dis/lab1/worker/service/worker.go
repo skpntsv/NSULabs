@@ -9,19 +9,24 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"sync"
 
 	"worker/models"
 )
 
 type Worker struct {
-	ManagerURL string
-	Charset    string
+	ManagerURL          string
+	Charset             string
+	ProgressByRequestID map[string]float64
+	ProgressMutex       sync.RWMutex
 }
 
 func NewWorker(managerURL string) *Worker {
 	return &Worker{
-		ManagerURL: managerURL,
-		Charset:    "abcdefghijklmnopqrstuvwxyz0123456789",
+		ManagerURL:          managerURL,
+		Charset:             "abcdefghijklmnopqrstuvwxyz0123456789",
+		ProgressByRequestID: make(map[string]float64),
+		ProgressMutex:       sync.RWMutex{},
 	}
 }
 
@@ -67,6 +72,20 @@ func (w *Worker) SendResponse(requestID string, partNumber int, matches []string
 
 	log.Printf("[RESPONSE] Sent response to manager for task %s (part %d), status: %s",
 		requestID, partNumber, resp.Status)
+		
+	w.ProgressMutex.Lock()
+	delete(w.ProgressByRequestID, requestID)
+	w.ProgressMutex.Unlock()
+}
+
+func (w *Worker) GetProgress(requestID string) float64 {
+	w.ProgressMutex.RLock()
+	defer w.ProgressMutex.RUnlock()
+	
+	if progress, exists := w.ProgressByRequestID[requestID]; exists {
+		return progress
+	}
+	return 0.0
 }
 
 func (w *Worker) BruteForceHash(task models.TaskRequest) []string {
@@ -91,6 +110,13 @@ func (w *Worker) BruteForceHash(task models.TaskRequest) []string {
 		startIndex, endIndex, totalCombinations)
 
 	var combinationIndex int64 = 0
+	var processedCount int64 = 0
+	var workPartSize = endIndex - startIndex
+	
+	w.ProgressMutex.Lock()
+	w.ProgressByRequestID[task.RequestID] = 0.0
+	w.ProgressMutex.Unlock()
+
 	for length := 1; length <= task.MaxLength; length++ {
 		combinationsForLength := int64(math.Pow(float64(len(w.Charset)), float64(length)))
 
@@ -105,20 +131,35 @@ func (w *Worker) BruteForceHash(task models.TaskRequest) []string {
 
 		word := make([]byte, length)
 		w.ProcessCombinations(word, 0, targetHash, &matches,
-			combinationIndex, startIndex, endIndex, &combinationIndex)
+			combinationIndex, startIndex, endIndex, &combinationIndex, 
+			&processedCount, workPartSize, task.RequestID)
 	}
+
+	w.ProgressMutex.Lock()
+	w.ProgressByRequestID[task.RequestID] = 100.0
+	w.ProgressMutex.Unlock()
 
 	return matches
 }
 
 func (w *Worker) ProcessCombinations(word []byte, position int, targetHash string,
-	matches *[]string, currentIndex, startIndex, endIndex int64, combinationIndex *int64) {
+	matches *[]string, currentIndex, startIndex, endIndex int64, combinationIndex *int64, 
+	processedCount *int64, workPartSize int64, requestID string) {
 
 	if position == len(word) {
 		if *combinationIndex >= startIndex && *combinationIndex < endIndex {
 			hash := md5.Sum(word)
 			if hex.EncodeToString(hash[:]) == targetHash {
 				*matches = append(*matches, string(word))
+			}
+			
+			(*processedCount)++
+			
+			if *processedCount%1000 == 0 {
+				progressPct := float64(*processedCount) / float64(workPartSize) * 100.0
+				w.ProgressMutex.Lock()
+				w.ProgressByRequestID[requestID] = progressPct
+				w.ProgressMutex.Unlock()
 			}
 		}
 
@@ -139,6 +180,6 @@ func (w *Worker) ProcessCombinations(word []byte, position int, targetHash strin
 	for i := 0; i < len(w.Charset); i++ {
 		word[position] = w.Charset[i]
 		w.ProcessCombinations(word, position+1, targetHash, matches,
-			currentIndex, startIndex, endIndex, combinationIndex)
+			currentIndex, startIndex, endIndex, combinationIndex, processedCount, workPartSize, requestID)
 	}
 }

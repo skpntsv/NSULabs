@@ -27,8 +27,9 @@ type Status struct {
 }
 
 type StatusResponse struct {
-	Status RequestStatus `json:"status"`
-	Data   *[]string     `json:"data"`
+	Status    RequestStatus `json:"status"`
+	Data      *[]string     `json:"data"`
+	ProgressPct float64     `json:"progressPct,omitempty"`
 }
 
 type WorkerRequest struct {
@@ -43,4 +44,11 @@ type WorkerResponse struct {
 	RequestID  string   `json:"requestId"`
 	Words      []string `json:"words"`
 	PartNumber int      `json:"partNumber"`
+}
+
+// Новая структура для получения прогресса от воркера
+type WorkerProgressResponse struct {
+	RequestID   string  `json:"requestId"`
+	PartNumber  int     `json:"partNumber"`
+	ProgressPct float64 `json:"progressPct"`
 }

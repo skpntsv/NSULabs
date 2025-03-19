@@ -13,3 +13,9 @@ type WorkerResponse struct {
 	Words      []string `json:"words"`
 	PartNumber int      `json:"partNumber"`
 }
+
+type ProgressResponse struct {
+	RequestID   string  `json:"requestId"`
+	PartNumber  int     `json:"partNumber"`
+	ProgressPct float64 `json:"progressPct"`
+}
