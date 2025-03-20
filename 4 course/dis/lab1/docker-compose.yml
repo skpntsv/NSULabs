@@ -4,7 +4,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - WORKER_URLS=http://worker1:8081,http://worker2:8081,http://worker3:8081
+      - WORKER_URLS=http://worker1:8081,http://worker2:8082,http://worker3:8083
     networks:
       - crackhash_net
 
@@ -12,6 +12,7 @@ services:
     build: ./worker
     environment:
       - MANAGER_URL=http://manager:8080
+      - PORT=8081
     networks:
       - crackhash_net
 
@@ -19,6 +20,7 @@ services:
     build: ./worker
     environment:
       - MANAGER_URL=http://manager:8080
+      - PORT=8082
     networks:
       - crackhash_net
 
@@ -26,6 +28,7 @@ services:
     build: ./worker
     environment:
       - MANAGER_URL=http://manager:8080
+      - PORT=8083
     networks:
       - crackhash_net
 

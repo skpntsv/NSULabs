@@ -39,7 +39,6 @@ func (a *API) HandleGetProgress(w http.ResponseWriter, r *http.Request) {
 	requestID := r.URL.Query().Get("requestId")
 	partNumberStr := r.URL.Query().Get("partNumber")
 
-	// Конвертация partNumber в int
 	partNumber, err := strconv.Atoi(partNumberStr)
 	if err != nil {
 		http.Error(w, `{"error": "invalid partNumber"}`, http.StatusBadRequest)
