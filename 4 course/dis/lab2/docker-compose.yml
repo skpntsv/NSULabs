@@ -61,12 +61,12 @@ services:
       mongo3:
         condition: service_healthy
     command: >
-      bash -c "sleep 10 && mongo --host mongo1:27017 --eval 'rs.initiate({
+      bash -c "sleep 10 && mongosh --host mongo1:27017 --eval 'rs.initiate({
         _id: \"rs0\",
         members: [
           {_id: 0, host: \"mongo1:27017\"},
-          {_id: 1, host: \"mongo2:27018\"},
-          {_id: 2, host: \"mongo3:27019\"}
+          {_id: 1, host: \"mongo2:27017\"},
+          {_id: 2, host: \"mongo3:27017\"}
         ]
       })'"
     restart: "no"
@@ -81,11 +81,29 @@ services:
     networks:
       - crackhash_net
 
+  rabbitmq:
+    image: rabbitmq:3.11-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
   worker1:
     build: ./worker
     environment:
       - MANAGER_URL=http://manager:8080
       - PORT=8081
+      - MONGO_URI=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
+      - MONGO_DB=crackhash
+      - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
     networks:
       - crackhash_net
 
@@ -93,6 +111,9 @@ services:
     build: ./worker
     environment:
       - MANAGER_URL=http://manager:8080
+      - MONGO_URI=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
+      - MONGO_DB=crackhash
+      - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
       - PORT=8082
     networks:
       - crackhash_net
@@ -102,9 +123,18 @@ services:
     environment:
       - MANAGER_URL=http://manager:8080
       - PORT=8083
+      - MONGO_URI=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
+      - MONGO_DB=crackhash
+      - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
     networks:
       - crackhash_net
 
 networks:
   crackhash_net:
       driver: bridge
+
+volumes:
+  mongo1_data:
+  mongo2_data:
+  mongo3_data:
+  rabbitmq_data:

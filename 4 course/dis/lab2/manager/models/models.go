@@ -19,12 +19,12 @@ type CrackResponse struct {
 	RequestID string `json:"requestId"`
 }
 
-type Status struct {
-	Status   RequestStatus
-	Data     []string
-	Total    int
-	Received int
-}
+// type Status struct {
+// 	Status   RequestStatus
+// 	Data     []string
+// 	Total    int
+// 	Received int
+// }
 
 type StatusResponse struct {
 	Status    RequestStatus `json:"status"`
