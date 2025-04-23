@@ -1,128 +1,260 @@
 package service
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
-	"math"
-	"net/http"
-	"sync"
 	"time"
 
-	"manager/config"
+	"manager/db"
 	"manager/models"
+	"manager/queue"
+
+	"github.com/streadway/amqp"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+const (
+	requestTimeout           = 10 * time.Minute
+	numTaskParts             = 3
+	pendingTaskRetryInterval = 10 * time.Second
+	reconnectDelay           = 5 * time.Second
 )
 
 type Manager struct {
-	Requests   map[string]*models.Status
-	Mutex      sync.Mutex
-	WorkerURLs []string
+	Repository *db.Repository
+	Publisher  *queue.Publisher
+	cancel     context.CancelFunc
 }
 
-func NewManager(workerURLs []string) *Manager {
-	return &Manager{
-		Requests:   make(map[string]*models.Status),
-		WorkerURLs: workerURLs,
+func NewManager(mongoClient *mongo.Client, rabbitURL string, dbName string) (*Manager, error) {
+	newRepository := db.NewRepository(mongoClient, dbName)
+	newPublisher, err := queue.NewPublisher(rabbitURL)
+	if err != nil {
+		return nil, err
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	m := &Manager{
+		Repository: newRepository,
+		Publisher:  newPublisher,
+		cancel:     cancel,
+	}
+
+	// Запускаем обработчик результатов параллельно
+	go m.listenForResults(ctx)
+	// Запускаем обработчик неотправленных задач
+	go m.runPendingTaskPublisher(ctx)
+
+	log.Println("Manager initialized successfully.")
+	return m, nil
 }
 
-func (m *Manager) DistributeWork(requestID string, req models.CrackRequest) {
-	m.Mutex.Lock()
-	m.Requests[requestID].Status = models.StatusInProgress
-	m.Mutex.Unlock()
+func (manager *Manager) StartCrackRequest(req models.CrackRequest, requestID string) (string, error) {
+	// Запускаем горутину для отслеживания таймаута запроса
+	go manager.setRequestTimeout(requestID)
 
-	workerCount := len(m.WorkerURLs)
-	if workerCount == 0 {
-		log.Printf("[ERROR] No available workers for request %s\n", requestID)
-		m.Mutex.Lock()
-		m.Requests[requestID].Status = models.StatusError
-		m.Mutex.Unlock()
-		return
-	}
-
-	wg := sync.WaitGroup{}
-	for i, workerURL := range m.WorkerURLs {
-		wg.Add(1)
+	// Делим задачу на части и отправляем в RabbitMQ
+	for i := 0; i < numTaskParts; i++ {
 		workerReq := models.WorkerRequest{
 			RequestID:  requestID,
 			PartNumber: i,
-			PartCount:  workerCount,
+			PartCount:  numTaskParts,
 			Hash:       req.Hash,
 			MaxLength:  req.MaxLength,
 		}
-		go func(url string, req models.WorkerRequest) {
-			defer wg.Done()
-			if !m.SendTaskToWorker(url, req) {
-				log.Printf("[WARNING] Worker %s failed, task %d will be retried.\n", url, req.PartNumber)
+
+		body, err := json.Marshal(workerReq)
+		if err != nil {
+			log.Printf("Failed to marshal task part %d for request %s: %v", i, requestID, err)
+			continue
+		}
+
+		err = manager.Publisher.PublishTask(body)
+		// Если отправка не удалась, сохраняем в MongoDB для повторной попытки
+		if err != nil {
+			log.Printf("Failed to publish task part %d for request %s to RabbitMQ: %v", i, requestID, err)
+			manager.Repository.SavePendingTask(workerReq, body)
+			continue
+		}
+
+		log.Printf("Sent task part %d for request %s", i, requestID)
+	}
+
+	filter := bson.M{"_id": requestID}
+	manager.Repository.UpdateTaskStatusTo(requestID, models.StatusInProgress, filter)
+
+	return requestID, nil
+}
+
+func (manager *Manager) runPendingTaskPublisher(ctx context.Context) {
+	log.Println("Starting pending task publisher...")
+	ticker := time.NewTicker(pendingTaskRetryInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Stopping pending task publisher...")
+			return
+		case <-ticker.C:
+			manager.tryRepublishPendingTasks()
+		}
+	}
+}
+
+func (manager *Manager) tryRepublishPendingTasks() {
+	findCtx, findCancel, cursor := manager.Repository.AllRequestsCursor()
+	defer findCancel()
+	defer cursor.Close(findCtx)
+
+	for cursor.Next(findCtx) {
+		var task models.PendingTask
+
+		err := manager.Publisher.PublishTask(task.TaskBody)
+		if err == nil {
+			log.Printf("Successfully republished pending task for request %s", task.RequestID)
+			manager.Repository.DeletePendingTask(task.ID)
+		} else {
+			log.Printf("Failed to republish pending task %s. I will retry later.", task.RequestID)
+		}
+	}
+}
+
+func (manager *Manager) setRequestTimeout(requestID string) {
+	time.Sleep(requestTimeout)
+
+	filter := bson.M{"_id": requestID, "status": models.StatusInProgress}
+	result := manager.Repository.UpdateTaskStatusTo(requestID, models.StatusError, filter)
+	if result.ModifiedCount > 0 {
+		log.Printf("Request %s Timeout", requestID)
+	} else {
+		// Статус уже был изменен
+		log.Printf("Request %s already completed or timed out, timeout check ignored", requestID)
+	}
+}
+
+func (m *Manager) listenForResults(ctx context.Context) {
+	log.Println("Starting workers listener")
+
+	for {
+		// Проверяем главный контекст перед каждой попыткой подключения
+		select {
+		case <-ctx.Done():
+			log.Println("Main context cancelled before attempting connection cycle.")
+			return
+		default:
+			// Продолжаем попытку
+		}
+
+		if !m.Publisher.IsConnected() {
+			log.Println("Attempting reconnect before consuming results")
+			err := m.Publisher.Reconnect(ctx)
+			if err != nil {
+				log.Printf("Reconnect failed: %v. Stopping listener.", err)
 			}
-		}(workerURL, workerReq)
-	}
-	wg.Wait()
-
-	time.AfterFunc(config.WorkerResponseTimeout, func() {
-		log.Printf("[TIMEOUT] Request %s timed out\n", requestID)
-		m.Mutex.Lock()
-		var status = m.Requests[requestID]
-		if status.Status == models.StatusInProgress && status.Received > 0 {
-			m.Requests[requestID].Status = models.StatusPartialReady
-		} else {
-			m.Requests[requestID].Status = models.StatusError
+			log.Println("Reconnect successful.")
 		}
-		m.Mutex.Unlock()
-	})
+
+		log.Println("Attempting to establish result consumer")
+		var msgs <-chan amqp.Delivery
+		var err error
+
+		msgs, err = m.Publisher.ConsumeResults()
+		if err != nil {
+			log.Printf("Failed to establish result consumer: %v. Will retry connection after delay", err)
+
+			select {
+			case <-time.After(reconnectDelay):
+				continue // Начать следующую итерацию внешнего цикла for
+			case <-ctx.Done():
+				log.Println("Main context cancelled while waiting to retry consumer setup.")
+			}
+		}
+
+		log.Println("Result consumer established successfully. Waiting for results...")
+	consumeLoop: // Метка для выхода из этого цикла
+		for {
+			select {
+			case <-ctx.Done():
+				log.Println("ain context cancelled while consuming results. Stopping listener.")
+				return
+			case d, ok := <-msgs:
+				if !ok {
+					log.Println("Result message channel closed. Breaking consume loop to attempt reconnect.")
+					break consumeLoop
+				}
+
+				log.Printf("Manager received a result message: %s", d.Body)
+				var res models.WorkerResponse
+				json.Unmarshal(d.Body, &res)
+
+				err = m.processWorkerResult(res)
+				if err != nil {
+					log.Printf("Manager failed to process worker result for request %s: %v", res.RequestID, err)
+					d.Nack(false, true)
+				} else {
+					d.Ack(false)
+				}
+			}
+		}
+
+		// Если мы здесь, значит break consumeLoop был вызван (канал msgs закрылся)
+
+		select {
+		case <-time.After(reconnectDelay):
+		case <-ctx.Done():
+			log.Println("Main context cancelled immediately after channel closure.")
+			return
+		}
+	}
 }
 
-func (m *Manager) SendTaskToWorker(workerURL string, req models.WorkerRequest) bool {
-	data, _ := json.Marshal(req)
-	_, err := http.Post(workerURL+"/internal/api/worker/hash/crack/task", "application/json", bytes.NewBuffer(data))
+func (m *Manager) processWorkerResult(res models.WorkerResponse) error {
+	currentInfo, err := m.Repository.FindRequest(res.RequestID)
 	if err != nil {
-		log.Printf("[ERROR] Failed to send task to %s: %v\n", workerURL, err)
-		return false
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			log.Printf("Request %s not found in DB when processing result of part %d", res.RequestID, res.PartNumber)
+			return nil
+		}
+		log.Printf("Failed to find request %s in DB: %v", res.RequestID, err)
+		return fmt.Errorf("failed to query request %s: %w", res.RequestID, err)
 	}
-	log.Printf("[TASK] Sent task %s to %s\n", req.RequestID, workerURL)
-	return true
+	if currentInfo.Status != models.StatusInProgress {
+		log.Printf("Received result for already completed/failed request %s (status: %s, part: %d)", res.RequestID, currentInfo.Status, res.PartNumber)
+		return nil
+	}
+
+	m.Repository.UpdateTaskAfterReceivePart(res, currentInfo)
+
+	return nil
 }
 
-func (m *Manager) ProcessWorkerResponse(res models.WorkerResponse) {
-	m.Mutex.Lock()
-	defer m.Mutex.Unlock()
-
-	if req, exists := m.Requests[res.RequestID]; exists {
-		req.Data = append(req.Data, res.Words...)
-		req.Received++
-		log.Printf("[RESPONSE] Received %d/%d from workers for %s\n", req.Received, req.Total, res.RequestID)
-		if req.Received == req.Total {
-			req.Status = models.StatusReady
-			log.Printf("[COMPLETE] Request %s completed\n", res.RequestID)
-		} else {
-			req.Status = models.StatusPartialReady
-		}
+func (manager *Manager) GetRequestStatus(requestId string) (models.StatusResponse, bool) {
+	requestInfo, err := manager.Repository.FindRequest(requestId)
+	if err != nil {
+		return models.StatusResponse{}, false
 	}
-}
 
-func (m *Manager) GetRequestStatus(requestID string) (models.StatusResponse, bool) {
-	m.Mutex.Lock()
-	req, exists := m.Requests[requestID]
-	m.Mutex.Unlock()
-
-	if exists {
-		var data *[]string = nil
-		if len(req.Data) > 0 {
-			data = &req.Data
-		}
-
-		progressPct := 0.0
-		if req.Status == models.StatusInProgress || req.Status == models.StatusPartialReady {
-			progressPct = m.CollectProgressFromWorkers(requestID)
-		} else if req.Status == models.StatusReady {
-			progressPct = 100.0
-		}
-
-		return models.StatusResponse{
-			Status:      req.Status,
-			Data:        data,
-			ProgressPct: math.Round(progressPct*100) / 100,
-		}, true
+	res := models.StatusResponse{
+		Status:      requestInfo.Status,
+		ProgressPct: 0,
+		Data:        nil,
 	}
-	return models.StatusResponse{}, false
+
+	if requestInfo.TotalParts > 0 {
+		res.ProgressPct = (float64(requestInfo.ReceivedParts) / float64(requestInfo.TotalParts)) * 100.0
+	}
+	if requestInfo.Status == models.StatusReady {
+		res.ProgressPct = 100
+	}
+
+	dataCopy := make([]string, len(requestInfo.Data))
+	copy(dataCopy, requestInfo.Data)
+	res.Data = &dataCopy
+
+	return res, true
 }

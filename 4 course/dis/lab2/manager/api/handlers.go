@@ -5,8 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/google/uuid"
-	
+	"manager/config"
 	"manager/models"
 	"manager/service"
 )
@@ -22,40 +21,42 @@ func NewAPI(manager *service.Manager) *API {
 }
 
 func (a *API) HandleCrackRequest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var req models.CrackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[ERROR] Failed to decode request: %v\n", err)
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
-	requestID := uuid.New().String()
-	a.Manager.Mutex.Lock()
-	a.Manager.Requests[requestID] = &models.Status{
-		Status: models.StatusNew, 
-		Total: len(a.Manager.WorkerURLs),
-	}
-	a.Manager.Mutex.Unlock()
+	requestInfo := a.Manager.Repository.SaveNewRequest(req, config.PartNumber)
+	log.Printf("[REQUEST] New request: %s (hash: %s, maxLength: %d)\n", requestInfo.ID, req.Hash, req.MaxLength)
 
-	log.Printf("[REQUEST] New request: %s (hash: %s, maxLength: %d)\n", requestID, req.Hash, req.MaxLength)
-	go a.Manager.DistributeWork(requestID, req)
-	json.NewEncoder(w).Encode(models.CrackResponse{RequestID: requestID})
-}
+	go func() {
+        defer func() {
+            if r := recover(); r != nil {
+                log.P("[PANIC] StartCrackRequest: %v", r)
+            }
+        }()
+        a.Manager.StartCrackRequest(req, requestInfo.ID)
+    }()
 
-func (a *API) HandleWorkerResponse(w http.ResponseWriter, r *http.Request) {
-	var res models.WorkerResponse
-	if err := json.NewDecoder(r.Body).Decode(&res); err != nil {
-		http.Error(w, "Invalid response", http.StatusBadRequest)
-		return
-	}
-
-	a.Manager.ProcessWorkerResponse(res)
-	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(models.CrackResponse{RequestID: requestInfo.ID})
 }
 
 func (a *API) GetStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
 	requestID := r.URL.Query().Get("requestId")
 	status, exists := a.Manager.GetRequestStatus(requestID)
-	
+
 	if exists {
 		json.NewEncoder(w).Encode(status)
 	} else {
@@ -65,6 +66,5 @@ func (a *API) GetStatus(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) RegisterRoutes() {
 	http.HandleFunc("/api/hash/crack", a.HandleCrackRequest)
-	http.HandleFunc("/internal/api/manager/hash/crack/request", a.HandleWorkerResponse)
 	http.HandleFunc("/api/hash/status", a.GetStatus)
 }

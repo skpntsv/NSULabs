@@ -19,17 +19,27 @@ type CrackResponse struct {
 	RequestID string `json:"requestId"`
 }
 
-// type Status struct {
-// 	Status   RequestStatus
-// 	Data     []string
-// 	Total    int
-// 	Received int
-// }
+type RequestInfoDB struct {
+	ID            string        `bson:"_id"`
+	Hash          string        `bson:"hash"`
+	MaxLength     int           `bson:"max_length"`
+	Status        RequestStatus `bson:"status"`
+	TotalParts    int           `bson:"total_parts"`
+	ReceivedParts int           `bson:"received_parts"`
+	Data          []string      `bson:"data,omitempty"`
+	ErrorMsg      string        `bson:"error_msg,omitempty"`
+}
 
 type StatusResponse struct {
-	Status    RequestStatus `json:"status"`
-	Data      *[]string     `json:"data"`
-	ProgressPct float64     `json:"progressPct,omitempty"`
+	Status      RequestStatus `json:"status"`
+	Data        *[]string     `json:"data"`
+	ProgressPct float64       `json:"progressPct,omitempty"`
+}
+
+type PendingTask struct {
+	ID        string `bson:"_id"`
+	RequestID string `bson:"request_id"`
+	TaskBody  []byte `bson:"task_body"`
 }
 
 type WorkerRequest struct {
@@ -46,7 +56,6 @@ type WorkerResponse struct {
 	PartNumber int      `json:"partNumber"`
 }
 
-// Новая структура для получения прогресса от воркера
 type WorkerProgressResponse struct {
 	RequestID   string  `json:"requestId"`
 	PartNumber  int     `json:"partNumber"`

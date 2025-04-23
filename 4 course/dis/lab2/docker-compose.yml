@@ -61,14 +61,22 @@ services:
       mongo3:
         condition: service_healthy
     command: >
-      bash -c "sleep 10 && mongosh --host mongo1:27017 --eval 'rs.initiate({
-        _id: \"rs0\",
-        members: [
-          {_id: 0, host: \"mongo1:27017\"},
-          {_id: 1, host: \"mongo2:27017\"},
-          {_id: 2, host: \"mongo3:27017\"}
-        ]
-      })'"
+      bash -c "
+        echo 'Waiting for MongoDB nodes...' &&
+        sleep 10 &&
+        echo 'Checking replica set status...' &&
+        mongosh --host mongo1:27017 --quiet --eval \"
+          try {
+            rs_status = rs.status();
+            print('Replica set already initialized. Status:');
+            printjson(rs_status.ok);
+          } catch (e) {
+            print('Replica set not initialized, attempting initiation...');
+            rs.initiate({ _id: 'rs0', members: [ { _id: 0, host: 'mongo1:27017' }, { _id: 1, host: 'mongo2:27017' }, { _id: 2, host: 'mongo3:27017' } ]});
+            print('Replica set initiation command sent.');
+          }
+        \"
+      "
     restart: "no"
     networks:
       - crackhash_net
@@ -77,13 +85,23 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - WORKER_URLS=http://worker1:8081,http://worker2:8082,http://worker3:8083
+      - MONGO_URLS=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
+      - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
+      - MONGO_DB=crackhash
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
     networks:
       - crackhash_net
 
   rabbitmq:
     image: rabbitmq:3.11-management
     container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -95,14 +113,14 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+    networks:
+      - crackhash_net
 
   worker1:
     build: ./worker
     environment:
       - MANAGER_URL=http://manager:8080
       - PORT=8081
-      - MONGO_URI=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
-      - MONGO_DB=crackhash
       - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
     networks:
       - crackhash_net
@@ -111,8 +129,6 @@ services:
     build: ./worker
     environment:
       - MANAGER_URL=http://manager:8080
-      - MONGO_URI=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
-      - MONGO_DB=crackhash
       - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
       - PORT=8082
     networks:
@@ -123,8 +139,6 @@ services:
     environment:
       - MANAGER_URL=http://manager:8080
       - PORT=8083
-      - MONGO_URI=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
-      - MONGO_DB=crackhash
       - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
     networks:
       - crackhash_net
