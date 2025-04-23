@@ -3,11 +3,9 @@ package api
 import (
 	"encoding/json"
 	"log"
-	"net/http"
-
-	"manager/config"
 	"manager/models"
 	"manager/service"
+	"net/http"
 )
 
 type API struct {
@@ -27,25 +25,28 @@ func (a *API) HandleCrackRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req models.CrackRequest
+	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("[ERROR] Failed to decode request: %v\n", err)
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		log.Printf("[API-ERROR] Failed to decode crack request: %v", err)
+		http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	requestID, err := a.Manager.CreateCrackRequest(req)
+	if err != nil {
+		log.Printf("[API-ERROR] Failed to create crack request via service: %v", err)
+		http.Error(w, `{"error": "Failed to initiate crack request"}`, http.StatusInternalServerError)
 		return
 	}
 
-	requestInfo := a.Manager.Repository.SaveNewRequest(req, config.PartNumber)
-	log.Printf("[REQUEST] New request: %s (hash: %s, maxLength: %d)\n", requestInfo.ID, req.Hash, req.MaxLength)
+	log.Printf("[API-INFO] Accepted crack request %s (hash: %s, maxLength: %d)", requestID, req.Hash, req.MaxLength)
 
-	go func() {
-        defer func() {
-            if r := recover(); r != nil {
-                log.P("[PANIC] StartCrackRequest: %v", r)
-            }
-        }()
-        a.Manager.StartCrackRequest(req, requestInfo.ID)
-    }()
-
-	json.NewEncoder(w).Encode(models.CrackResponse{RequestID: requestInfo.ID})
+	response := models.CrackResponse{RequestID: requestID}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("[API-ERROR] Failed to encode crack response for request %s: %v", requestID, err)
+	}
 }
 
 func (a *API) GetStatus(w http.ResponseWriter, r *http.Request) {
@@ -55,16 +56,29 @@ func (a *API) GetStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	requestID := r.URL.Query().Get("requestId")
-	status, exists := a.Manager.GetRequestStatus(requestID)
+	if requestID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, `{"error": "requestId query parameter is required"}`, http.StatusBadRequest)
+		return
+	}
 
-	if exists {
-		json.NewEncoder(w).Encode(status)
-	} else {
-		http.Error(w, "Request not found", http.StatusNotFound)
+	statusResponse, exists := a.Manager.GetRequestStatus(requestID)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if !exists {
+		log.Printf("[API-WARN] Status requested for unknown ID: %s", requestID)
+		http.Error(w, `{"error": "Request not found"}`, http.StatusNotFound)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(statusResponse); err != nil {
+		log.Printf("[API-ERROR] Failed to encode status response for request %s: %v", requestID, err)
 	}
 }
 
 func (a *API) RegisterRoutes() {
 	http.HandleFunc("/api/hash/crack", a.HandleCrackRequest)
 	http.HandleFunc("/api/hash/status", a.GetStatus)
+	log.Println("[API-INFO] Registered HTTP routes: /api/hash/crack, /api/hash/status")
 }

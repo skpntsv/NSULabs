@@ -124,6 +124,9 @@ services:
       - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
     networks:
       - crackhash_net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   worker2:
     build: ./worker
