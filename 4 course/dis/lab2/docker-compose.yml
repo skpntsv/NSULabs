@@ -102,7 +102,7 @@ services:
     networks:
       - crackhash_net
 
-  worker1:
+  worker:
     build: ./worker
     environment:
       - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
@@ -111,20 +111,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-
-  worker2:
-    build: ./worker
-    environment:
-      - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
-    networks:
-      - crackhash_net
-
-  worker3:
-    build: ./worker
-    environment:
-      - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
-    networks:
-      - crackhash_net
+    deploy:
+      replicas: 7
 
 networks:
   crackhash_net:

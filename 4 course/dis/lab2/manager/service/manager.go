@@ -373,7 +373,7 @@ func (m *Manager) GetRequestStatus(requestID string) (models.StatusResponse, boo
 	}
 
 	if requestInfo.TotalParts > 0 && requestInfo.Status == models.StatusInProgress {
-		res.ProgressPct = math.Round((float64(requestInfo.ReceivedParts) / float64(requestInfo.TotalParts)) * 100.0)
+		res.ProgressPct = math.Round((float64(requestInfo.ReceivedParts) / float64(requestInfo.TotalParts)) * 10000.0) / 100
 	}
 
 	if requestInfo.Status == models.StatusReady {
@@ -383,7 +383,7 @@ func (m *Manager) GetRequestStatus(requestID string) (models.StatusResponse, boo
 		res.ProgressPct = 100.0
 	}
 	if requestInfo.Status == models.StatusError {
-		res.ProgressPct = math.Round((float64(requestInfo.ReceivedParts) / float64(requestInfo.TotalParts)) * 100.0)
+		res.ProgressPct = math.Round((float64(requestInfo.ReceivedParts) / float64(requestInfo.TotalParts)) * 10000.0) / 100
 	}
 
 	return res, true

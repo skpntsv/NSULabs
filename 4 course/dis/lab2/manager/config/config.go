@@ -3,7 +3,7 @@ package config
 import "time"
 
 const (
-	PartNumber            = 3
+	PartNumber            = 90
 	DbTimeout             = 10 * time.Second
 	WorkerTasksCollectionName = "worker_tasks"
 	HashRequestCollectionName = "hash_requests"
