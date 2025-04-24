@@ -12,7 +12,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 5s
+      start_period: 10s
     networks:
       - crackhash_net
 
@@ -29,7 +29,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 5s
+      start_period: 10s
     networks:
       - crackhash_net
 
@@ -46,7 +46,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 5s
+      start_period: 10s
     networks:
       - crackhash_net
 
@@ -60,23 +60,9 @@ services:
         condition: service_healthy
       mongo3:
         condition: service_healthy
-    command: >
-      bash -c "
-        echo 'Waiting for MongoDB nodes...' &&
-        sleep 10 &&
-        echo 'Checking replica set status...' &&
-        mongosh --host mongo1:27017 --quiet --eval \"
-          try {
-            rs_status = rs.status();
-            print('Replica set already initialized. Status:');
-            printjson(rs_status.ok);
-          } catch (e) {
-            print('Replica set not initialized, attempting initiation...');
-            rs.initiate({ _id: 'rs0', members: [ { _id: 0, host: 'mongo1:27017' }, { _id: 1, host: 'mongo2:27017' }, { _id: 2, host: 'mongo3:27017' } ]});
-            print('Replica set initiation command sent.');
-          }
-        \"
-      "
+    volumes:
+      - ./mongo/init-replica.sh:/scripts/init-replica.sh
+    command: ["bash", "/scripts/init-replica.sh"]
     restart: "no"
     networks:
       - crackhash_net
@@ -119,8 +105,6 @@ services:
   worker1:
     build: ./worker
     environment:
-      - MANAGER_URL=http://manager:8080
-      - PORT=8081
       - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
     networks:
       - crackhash_net
@@ -131,17 +115,13 @@ services:
   worker2:
     build: ./worker
     environment:
-      - MANAGER_URL=http://manager:8080
       - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
-      - PORT=8082
     networks:
       - crackhash_net
 
   worker3:
     build: ./worker
     environment:
-      - MANAGER_URL=http://manager:8080
-      - PORT=8083
       - RABBIT_URI=amqp://guest:guest@rabbitmq:5672/
     networks:
       - crackhash_net

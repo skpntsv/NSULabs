@@ -8,8 +8,8 @@ import (
 const (
 	rabbitMQDefaultURL = "amqp://guest:guest@rabbitmq:5672/"
 	taskExchangeName   = "tasks_exchange"
-	taskQueueName      = "tasks_queue"
-	resultQueueName    = "results_queue"
+	taskQueueName      = "crachhash_tasks"
+	resultQueueName    = "crackhash_results"
 	taskRoutingKey     = "task.crack.request"
 	resultRoutingKey   = "task.crack.result"
 	reconnectDelay     = 5 * time.Second
