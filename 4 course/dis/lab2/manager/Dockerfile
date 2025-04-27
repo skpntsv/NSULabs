@@ -20,5 +20,7 @@ WORKDIR /app
 # Копируем собранный бинарник из этапа сборки
 COPY --from=builder /app/manager/manager .
 
+COPY --from=builder /app/manager/static ./static
+
 EXPOSE 8080
 CMD ["./manager"]

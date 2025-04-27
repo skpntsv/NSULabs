@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>CrackHash UI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #555;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        form {
+            margin-bottom: 25px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e3e3e3;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #5cb85c;
+            color: white;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result-area {
+            margin-top: 20px;
+            background-color: #f0f5f9; 
+            border: 1px solid #c5d9e8;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .result-area h3 {
+            margin-top: 0;
+            color: #31708f;
+        }
+        .result-details p {
+            margin: 5px 0;
+            font-size: 0.95em;
+        }
+        .result-details strong {
+            min-width: 100px;
+            display: inline-block;
+            color: #555;
+        }
+        .result-details .data-found {
+            font-weight: bold;
+            color: #3c763d;
+        }
+        .result-details .data-notfound {
+            font-style: italic;
+            color: #a94442;
+        }
+        .result-details .status-inprogress {
+            color: #8a6d3b;
+        }
+        .result-details .status-error {
+            color: #a94442;
+            font-weight: bold;
+        }
+        .progress-bar {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: .25rem;
+            overflow: hidden;
+            height: 1.2rem;
+            margin-top: 10px;
+        }
+        .progress-bar-inner {
+            height: 100%;
+            background-color: #5cb85c;
+            color: white;
+            text-align: center;
+            line-height: 1.2rem;
+            white-space: nowrap;
+            transition: width .6s ease;
+            font-size: 0.8rem;
+        }
+        #feedback {
+            margin-top: 15px;
+            font-style: italic;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CrackHash</h1>
+
+        <!-- Секция отправки нового запроса -->
+        <div class="submit-section">
+            <h2>Отправить новую задачу</h2>
+            <form id="crack-form">
+                <div>
+                    <label for="hash">MD5 Hash:</label>
+                    <input type="text" id="hash" name="hash" placeholder="e.g., d077f244def8a70e5ea758bd8352fcd8" required>
+                </div>
+                <div>
+                    <label for="maxLength">Максимальная длина слова:</label>
+                    <input type="number" id="maxLength" name="maxLength" min="1" value="4" required>
+                </div>
+                <button type="submit" id="submitButton">Отправить Задачу</button>
+            </form>
+            <div id="submitFeedback"></div>
+        </div>
+
+        <!-- Секция проверки статуса -->
+        <div class="status-section">
+            <h2>Проверить статус задачи</h2>
+            <form id="status-check-form">
+                <div>
+                    <label for="statusRequestId">Request ID:</label>
+                    <input type="text" id="statusRequestId" name="statusRequestId" placeholder="Введите ID запроса или отправьте новую задачу" required>
+                </div>
+                <button type="submit" id="checkStatusButton">Проверить Статус</button>
+                <button type="button" id="startPollingButton" disabled>Авто-обновление</button> 
+                <button type="button" id="stopPollingButton" disabled>Остановить авто-обновление</button>
+            </form>
+            <div id="statusFeedback"></div>
+
+            <div class="result-area" id="resultDisplay" style="display: none;">
+                <h3>Результат для ID: <span id="resultRequestId"></span></h3>
+                <div class="result-details">
+                    <p><strong>Статус:</strong> <span id="resultStatus"></span></p>
+                    <div id="progressContainer" style="display: none;"> 
+                        <p><strong>Прогресс:</strong></p>
+                        <div class="progress-bar">
+                            <div class="progress-bar-inner" id="resultProgress" style="width: 0%;">0%</div>
+                        </div>
+                    </div>
+                    <p><strong>Результат:</strong> <span id="resultData"></span></p>
+                </div>
+            </div>
+        </div>
+
+    </div> 
+
+    <script>
+        const crackForm = document.getElementById('crack-form');
+        const submitButton = document.getElementById('submitButton');
+        const submitFeedback = document.getElementById('submitFeedback');
+
+        const statusCheckForm = document.getElementById('status-check-form');
+        const statusRequestIdInput = document.getElementById('statusRequestId');
+        const checkStatusButton = document.getElementById('checkStatusButton');
+        const startPollingButton = document.getElementById('startPollingButton');
+        const stopPollingButton = document.getElementById('stopPollingButton');
+        const statusFeedback = document.getElementById('statusFeedback');
+
+        // Элементы для отображения результата
+        const resultDisplayArea = document.getElementById('resultDisplay');
+        const resultRequestIdSpan = document.getElementById('resultRequestId');
+        const resultStatusSpan = document.getElementById('resultStatus');
+        const resultDataSpan = document.getElementById('resultData');
+        const progressContainer = document.getElementById('progressContainer');
+        const resultProgressBar = document.getElementById('resultProgress');
+
+        let statusCheckInterval = null;
+        let currentPollingId = null;    
+
+        // --- Обработчик отправки новой задачи ---
+        crackForm.onsubmit = async (e) => {
+            e.preventDefault();
+            disableSubmit(true);
+            submitFeedback.textContent = 'Отправка запроса...';
+            stopPolling();
+
+            const hash = document.getElementById('hash').value;
+            const maxLength = parseInt(document.getElementById('maxLength').value);
+
+            try {
+                const res = await fetch('/api/hash/crack', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hash, maxLength })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || `HTTP error! status: ${res.status}`);
+
+                const requestId = data.requestId;
+                submitFeedback.textContent = 'Запрос успешно отправлен. ID: ' + requestId;
+                statusRequestIdInput.value = requestId; 
+
+                await checkAndDisplayStatus(requestId, true);
+                enablePollingButtons(true);
+
+            } catch (error) {
+                console.error('Submit error:', error);
+                submitFeedback.textContent = 'Ошибка отправки: ' + error.message;
+                resultDisplayArea.style.display = 'none';
+            } finally {
+                disableSubmit(false);
+            }
+        };
+
+        // --- Обработчик ручной проверки статуса по ID ---
+        statusCheckForm.onsubmit = async (e) => {
+            e.preventDefault();
+            stopPolling();
+            const requestId = statusRequestIdInput.value;
+            await checkAndDisplayStatus(requestId, false);
+        };
+
+        startPollingButton.onclick = () => {
+            const requestId = statusRequestIdInput.value;
+            if (requestId && !statusCheckInterval) {
+                checkAndDisplayStatus(requestId, true);
+            }
+        };
+
+        stopPollingButton.onclick = () => {
+            stopPolling();
+        };
+
+
+        // --- Функция для получения и отображения статуса ---
+        async function checkAndDisplayStatus(requestId, startPollingAfter) {
+            disableStatusCheck(true);
+            statusFeedback.textContent = `Запрос статуса для ID: ${requestId}...`;
+            resultDisplayArea.style.display = 'none';
+
+            try {
+                const statusData = await fetchStatus(requestId);
+                displayResult(requestId, statusData);
+                statusFeedback.textContent = 'Статус получен.';
+                if (startPollingAfter && statusData.status !== "READY" && statusData.status !== "ERROR") {
+                    startPolling(requestId);
+                } else {
+                    stopPolling();
+                }
+
+            } catch(error) {
+                console.error('Status check error:', error);
+                statusFeedback.textContent = 'Ошибка проверки статуса: ' + error.message;
+                resultDisplayArea.style.display = 'none';
+                stopPolling();
+            } finally {
+                disableStatusCheck(false);
+            }
+        }
+
+        // --- Функция для получения статуса (fetch) ---
+        async function fetchStatus(requestId) {
+            if (!requestId) throw new Error("Request ID не указан");
+            const statusRes = await fetch('/api/hash/status?requestId=' + requestId);
+            const statusData = await statusRes.json();
+            if (!statusRes.ok) throw new Error(statusData.error || `HTTP error! status: ${statusRes.status}`);
+            return statusData;
+        }
+
+        // --- Функция для отображения результата ---
+        function displayResult(reqId, data) {
+            resultDisplayArea.style.display = 'block'; 
+            resultRequestIdSpan.textContent = reqId;
+
+             // Статус
+            resultStatusSpan.textContent = data.status;
+            resultStatusSpan.className = '';
+            if(data.status === "IN_PROGRESS") resultStatusSpan.classList.add('status-inprogress');
+            if(data.status === "ERROR") resultStatusSpan.classList.add('status-error');
+
+             // Прогресс
+            if (data.progressPct !== undefined && data.progressPct !== null) {
+                progressContainer.style.display = 'block';
+                const progressVal = Math.round(data.progressPct);
+                resultProgressBar.style.width = progressVal + '%';
+                resultProgressBar.textContent = progressVal + '%';
+            } else {
+                 progressContainer.style.display = 'none'; // Скрываем прогресс, если нет данных
+            }
+
+            if (data.status === "READY") {
+                if (data.data && data.data.length > 0) {
+                    resultDataSpan.textContent = data.data.join(', ');
+                    resultDataSpan.className = 'data-found';
+                } else {
+                    resultDataSpan.textContent = '(не найдено)';
+                    resultDataSpan.className = 'data-notfound';
+                }
+            } else if (data.status === "ERROR") {
+                resultDataSpan.textContent = '(ошибка)';
+                resultDataSpan.className = 'data-notfound';
+            }
+            else {
+                resultDataSpan.textContent = '(в процессе...)';
+                resultDataSpan.className = '';
+            }
+        }
+
+
+        function startPolling(requestId) {
+            stopPolling(); 
+            currentPollingId = requestId;
+            statusFeedback.textContent = `Авто-обновление статуса для ID: ${requestId}...`;
+            enablePollingButtons(true);
+
+            statusCheckInterval = setInterval(async () => {
+                try {
+                    const statusData = await fetchStatus(currentPollingId);
+                    displayResult(currentPollingId, statusData);
+                    statusFeedback.textContent = `Авто-обновление статуса для ID: ${currentPollingId}`;
+
+                    if (statusData.status === "READY" || statusData.status === "ERROR") {
+                        stopPolling();
+                        statusFeedback.textContent += " - Завершено.";
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                    statusFeedback.textContent = `Ошибка авто-обновления для ID ${currentPollingId}: ${error.message}`;
+                    stopPolling();
+                }
+            }, 500);
+        }
+
+        function stopPolling() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+                currentPollingId = null;
+                statusFeedback.textContent += " (Авто-обновление остановлено)";
+                enablePollingButtons(false);
+            }
+        }
+
+        function disableSubmit(disable) {
+            submitButton.disabled = disable;
+        }
+        function disableStatusCheck(disable) {
+            checkStatusButton.disabled = disable;
+        }
+        function enablePollingButtons(enable) {
+            startPollingButton.disabled = enable; 
+            stopPollingButton.disabled = !enable;
+        }
+
+        enablePollingButtons(false);
+
+    </script>
+</body>
+</html>
