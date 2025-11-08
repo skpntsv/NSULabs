@@ -12,9 +12,12 @@
 
 (defn get-all-sequences [length chars]
   {:pre [(> length 0)]}
-  (let [r (range length)
-        tmp-coll (map (fn [_] chars) r)]
-    (reduce add-multiple-characters tmp-coll)))
+  (loop [current-length length
+         sequences      chars]
+    (if (> current-length 1)
+      (recur (dec current-length)
+             (add-multiple-characters sequences chars))
+      sequences)))
 
 (defn -main [& _]
   (let [n 4
