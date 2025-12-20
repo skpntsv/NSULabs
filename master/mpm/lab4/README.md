@@ -1,22 +1,19 @@
-# lab4
+## ДНФ (дизъюнктивная нормальная форма)
 
-A Clojure library designed to ... well, that part is up to you.
+По аналогии с задачей символьного дифференцирования реализовать представление **символьных булевых выражений** со следующими операциями:
 
-## Usage
+- конъюнкция,
+- дизъюнкция,
+- отрицание,
+- импликация.
 
-FIXME
+Выражения могут включать:
+- булевы константы,
+- переменные.
 
-## License
-
-Copyright © 2025 FIXME
-
-This program and the accompanying materials are made available under the
-terms of the Eclipse Public License 2.0 which is available at
-http://www.eclipse.org/legal/epl-2.0.
-
-This Source Code may also be made available under the following Secondary
-Licenses when the conditions for such availability set forth in the Eclipse
-Public License, v. 2.0 are satisfied: GNU General Public License as published by
-the Free Software Foundation, either version 2 of the License, or (at your
-option) any later version, with the GNU Classpath Exception which is available
-at https://www.gnu.org/software/classpath/license.html.
+### Требования
+- Реализовать подстановку значения переменной в выражение с приведением результата к **ДНФ**.
+- Обеспечить **расширяемость** для добавления новых операций (исключающее ИЛИ, стрелка Пирса и т.п.).
+- Код должен быть:
+  - покрыт тестами,
+  - с документированным API.

@@ -1,22 +1,17 @@
-# lab3
 
-A Clojure library designed to ... well, that part is up to you.
+## Параллельная обработка последовательностей
 
-## Usage
+### 1. Параллельный `filter`
+Реализуйте параллельный вариант `filter` (не обязательно ленивый) с помощью `future`.
 
-FIXME
+Требования:
+- Параллельная обработка должна производиться **блоками по заданному числу элементов**.
+- Размер блоков следует вычислять вручную, **без использования готовых функций**, таких как `partition`.
+- Для разделения последовательности необходимо использовать `take` и `drop`.
 
-## License
+Продемонстрируйте **прирост производительности** по сравнению с обычным `filter`.
 
-Copyright © 2025 FIXME
+### 2. Ленивый параллельный `filter`
+Реализуйте **ленивый** параллельный `filter`, который должен корректно работать в том числе с **бесконечными потоками**.
 
-This program and the accompanying materials are made available under the
-terms of the Eclipse Public License 2.0 which is available at
-http://www.eclipse.org/legal/epl-2.0.
-
-This Source Code may also be made available under the following Secondary
-Licenses when the conditions for such availability set forth in the Eclipse
-Public License, v. 2.0 are satisfied: GNU General Public License as published by
-the Free Software Foundation, either version 2 of the License, or (at your
-option) any later version, with the GNU Classpath Exception which is available
-at https://www.gnu.org/software/classpath/license.html.
+Продемонстрируйте **прирост производительности** по сравнению с обычным `filter`.
